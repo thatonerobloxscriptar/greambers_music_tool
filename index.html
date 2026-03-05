@@ -1,0 +1,799 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Greambers Music Tool</title>
+
+  <style>
+    :root{
+      --bg: #0b0f17;
+      --panel: rgba(255,255,255,0.06);
+      --panel2: rgba(255,255,255,0.10);
+      --text: rgba(255,255,255,0.92);
+      --muted: rgba(255,255,255,0.68);
+      --stroke: rgba(255,255,255,0.14);
+
+      --barH: 16px;
+      --barW: min(640px, 86vw);
+      --radius: 14px;
+
+      --danger: rgba(255, 80, 80, 0.95);
+      --danger2: rgba(255, 80, 80, 0.35);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body{
+      margin: 0;
+      background: radial-gradient(1200px 700px at 70% 20%, rgba(120,160,255,0.12), transparent 55%),
+                  radial-gradient(900px 600px at 20% 70%, rgba(255,120,220,0.08), transparent 55%),
+                  var(--bg);
+      color: var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      overflow: hidden;
+    }
+
+    /* ---------- LOADER ---------- */
+    #loader{
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      z-index: 9999;
+      background: transparent;
+      transition: opacity 420ms ease, transform 420ms ease;
+    }
+    #loader.is-done{
+      opacity: 0;
+      transform: scale(1.01);
+      pointer-events: none;
+    }
+
+    .loader-stack{
+      width: var(--barW);
+      display: grid;
+      gap: 22px;
+      align-items: center;
+      justify-items: stretch;
+      padding: 26px 18px;
+      border-radius: 22px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04));
+      border: 1px solid var(--stroke);
+      box-shadow:
+        0 20px 80px rgba(0,0,0,0.55),
+        0 0 0 1px rgba(255,255,255,0.02) inset;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      position: relative;
+      overflow: hidden;
+    }
+    .loader-stack::before{
+      content:"";
+      position:absolute;
+      inset:-2px;
+      background: radial-gradient(700px 200px at 30% 0%, rgba(255,255,255,0.10), transparent 65%);
+      pointer-events:none;
+    }
+
+    .load-row{
+      display: grid;
+      gap: 10px;
+      transform: translateY(-110vh);
+      opacity: 0;
+      filter: blur(6px);
+      will-change: transform, opacity, filter;
+    }
+
+    .load-row.drop-in{
+      animation: dropIn 820ms cubic-bezier(.2,1.15,.2,1) forwards;
+    }
+    .load-row.drop-in.delay-1{ animation-delay: 80ms; }
+    .load-row.drop-in.delay-2{ animation-delay: 170ms; }
+
+    @keyframes dropIn{
+      0%   { transform: translateY(-110vh); opacity: 0; filter: blur(8px); }
+      60%  { transform: translateY(14px); opacity: 1; filter: blur(1px); }
+      78%  { transform: translateY(-6px); }
+      100% { transform: translateY(0); filter: blur(0); }
+    }
+
+    .label{
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+      color: var(--text);
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      opacity: 0;
+      transform: translateY(8px);
+      filter: blur(6px);
+    }
+    .load-row.drop-in .label{
+      animation: formUp 720ms cubic-bezier(.2,1,.2,1) forwards;
+      animation-delay: 380ms;
+    }
+    .load-row.drop-in.delay-2 .label{
+      animation-delay: 470ms;
+    }
+
+    @keyframes formUp{
+      0%   { opacity: 0; transform: translateY(10px); filter: blur(7px); }
+      100% { opacity: 1; transform: translateY(0); filter: blur(0); }
+    }
+
+    .pct{
+      font-variant-numeric: tabular-nums;
+      color: var(--muted);
+      font-weight: 600;
+      min-width: 56px;
+      text-align: right;
+    }
+
+    .bar{
+      position: relative;
+      height: var(--barH);
+      border-radius: var(--radius);
+      background: rgba(0,0,0,0.28);
+      border: 1px solid rgba(255,255,255,0.10);
+      overflow: hidden;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.02) inset;
+    }
+
+    .fill{
+      height: 100%;
+      width: 0%;
+      border-radius: var(--radius);
+      background: linear-gradient(90deg,
+        rgba(255,255,255,0.18),
+        rgba(255,255,255,0.36),
+        rgba(255,255,255,0.22)
+      );
+      box-shadow:
+        0 0 30px rgba(255,255,255,0.12),
+        0 0 0 1px rgba(255,255,255,0.08) inset;
+      transform: translateZ(0);
+      will-change: width;
+    }
+
+    .bar::after{
+      content:"";
+      position:absolute;
+      top:-60%;
+      left:-40%;
+      width: 40%;
+      height: 220%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.10), transparent);
+      transform: skewX(-18deg);
+      animation: shimmer 1.25s linear infinite;
+      opacity: 0.6;
+      pointer-events:none;
+    }
+    @keyframes shimmer{
+      0%   { left:-40%; }
+      100% { left:110%; }
+    }
+
+    .substatus{
+      font-size: 12.5px;
+      color: var(--muted);
+      margin-top: -2px;
+      min-height: 1.2em;
+      opacity: 0;
+      transform: translateY(6px);
+      filter: blur(6px);
+    }
+    .load-row.drop-in .substatus{
+      animation: formUp 700ms cubic-bezier(.2,1,.2,1) forwards;
+      animation-delay: 520ms;
+    }
+
+    /* ---------- APP ROOT ---------- */
+    #app{
+      position: fixed;
+      inset: 0;
+      display: none;
+      overflow: auto;
+      padding: 18px;
+    }
+    #app.ready{ display: block; }
+
+    .shell{
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      gap: 14px;
+    }
+
+    .topbar{
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.35);
+      overflow: hidden;
+    }
+
+    .topbar-inner{
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+    }
+
+    .brand{
+      display: grid;
+      gap: 2px;
+    }
+    .brand .title{
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: 0.2px;
+      line-height: 1.1;
+    }
+    .brand .subtitle{
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .error-banner{
+      display: none;
+      padding: 10px 14px;
+      border-top: 1px solid rgba(255,255,255,0.10);
+      color: rgba(255,255,255,0.92);
+      background: linear-gradient(90deg, rgba(255,80,80,0.16), rgba(255,80,80,0.06));
+    }
+    .error-banner.show{
+      display: block;
+      animation: bannerIn 240ms ease-out;
+    }
+    @keyframes bannerIn{
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .panel{
+      border-radius: 18px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.10);
+      box-shadow: 0 18px 70px rgba(0,0,0,0.35);
+      overflow: hidden;
+    }
+    .panel-head{
+      padding: 14px 14px 10px;
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .panel-head h2{
+      margin: 0;
+      font-size: 15px;
+      letter-spacing: 0.2px;
+    }
+    .panel-head .meta{
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .songlist{
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .song{
+      display: grid;
+      grid-template-columns: 54px 1fr;
+      gap: 12px;
+      align-items: center;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.10);
+      cursor: pointer;
+      user-select: none;
+      transition: transform 140ms ease, background 140ms ease, border-color 140ms ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .song:hover{
+      transform: translateY(-1px);
+      background: rgba(255,255,255,0.065);
+      border-color: rgba(255,255,255,0.16);
+    }
+
+    .iconbox{
+      width: 54px;
+      height: 54px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      background: rgba(0,0,0,0.25);
+      border: 1px solid rgba(255,255,255,0.10);
+      overflow: hidden;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.02) inset;
+    }
+
+    .iconbox img{
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .icon-missing{
+      font-weight: 900;
+      font-size: 22px;
+      letter-spacing: 1px;
+      color: rgba(255,255,255,0.72);
+      text-shadow: 0 6px 18px rgba(0,0,0,0.4);
+    }
+
+    .songname{
+      font-size: 15px;
+      font-weight: 750;
+      letter-spacing: 0.2px;
+      line-height: 1.2;
+    }
+    .songsub{
+      margin-top: 4px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* Click error animation: pulse red border + slight shake */
+    .song.error{
+      border-color: var(--danger);
+      animation: shake 320ms ease-in-out, pulseBorder 800ms ease-out;
+    }
+    @keyframes shake{
+      0%   { transform: translateX(0); }
+      18%  { transform: translateX(-5px); }
+      36%  { transform: translateX(5px); }
+      54%  { transform: translateX(-4px); }
+      72%  { transform: translateX(4px); }
+      100% { transform: translateX(0); }
+    }
+    @keyframes pulseBorder{
+      0%   { box-shadow: 0 0 0 0 rgba(255,80,80,0.0); }
+      20%  { box-shadow: 0 0 0 6px rgba(255,80,80,0.18); }
+      55%  { box-shadow: 0 0 0 2px rgba(255,80,80,0.10); }
+      100% { box-shadow: 0 0 0 0 rgba(255,80,80,0.0); }
+    }
+
+    .empty{
+      padding: 18px 14px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .pill{
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.10);
+      color: rgba(255,255,255,0.82);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Loader -->
+  <div id="loader" aria-live="polite" aria-busy="true">
+    <div class="loader-stack">
+      <!-- Row 1 -->
+      <div class="load-row" id="rowSongs">
+        <div class="label">
+          <span id="labelSongs">Loading Songs and Icons...</span>
+          <span class="pct" id="pctSongs">0%</span>
+        </div>
+        <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Loading Songs and Icons">
+          <div class="fill" id="fillSongs"></div>
+        </div>
+        <div class="substatus" id="statusSongs"></div>
+      </div>
+
+      <!-- Row 2 -->
+      <div class="load-row" id="rowTool">
+        <div class="label">
+          <span id="labelTool">Loading tool...</span>
+          <span class="pct" id="pctTool">0%</span>
+        </div>
+        <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Loading tool">
+          <div class="fill" id="fillTool"></div>
+        </div>
+        <div class="substatus" id="statusTool"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- App Root -->
+  <div id="app">
+    <div class="shell">
+      <div class="topbar">
+        <div class="topbar-inner">
+          <div class="brand">
+            <div class="title">Greambers Music Tool</div>
+            <div class="subtitle">Songs list (prototype)</div>
+          </div>
+          <div class="pill" id="songCountPill">0 songs</div>
+        </div>
+        <div class="error-banner" id="errorBanner">1000 - SYSTEM NOT FULLY COMPLETE</div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Added Songs</h2>
+          <div class="meta" id="sourceMeta">Source: detecting…</div>
+        </div>
+
+        <div class="songlist" id="songList"></div>
+        <div class="empty" id="emptyState" style="display:none;"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * Loader progress plumbing (same vibe as before)
+     */
+    const ui = {
+      loader: document.getElementById("loader"),
+      app: document.getElementById("app"),
+
+      rowSongs: document.getElementById("rowSongs"),
+      fillSongs: document.getElementById("fillSongs"),
+      pctSongs: document.getElementById("pctSongs"),
+      statusSongs: document.getElementById("statusSongs"),
+
+      rowTool: document.getElementById("rowTool"),
+      fillTool: document.getElementById("fillTool"),
+      pctTool: document.getElementById("pctTool"),
+      statusTool: document.getElementById("statusTool"),
+
+      songList: document.getElementById("songList"),
+      emptyState: document.getElementById("emptyState"),
+      songCountPill: document.getElementById("songCountPill"),
+      sourceMeta: document.getElementById("sourceMeta"),
+      errorBanner: document.getElementById("errorBanner"),
+    };
+
+    requestAnimationFrame(() => {
+      ui.rowSongs.classList.add("drop-in", "delay-1");
+      ui.rowTool.classList.add("drop-in", "delay-2");
+    });
+
+    function clamp01(n){ return Math.max(0, Math.min(1, n)); }
+
+    const progress = {
+      songsTarget: 0,
+      toolTarget: 0,
+      songsShown: 0,
+      toolShown: 0,
+      doneSongs: false,
+      doneTool: false,
+    };
+
+    function setSongsProgress(value01, statusText){
+      progress.songsTarget = clamp01(value01);
+      if (typeof statusText === "string") ui.statusSongs.textContent = statusText;
+      ui.statusSongs.style.opacity = statusText ? "1" : "";
+    }
+
+    function setToolProgress(value01, statusText){
+      progress.toolTarget = clamp01(value01);
+      if (typeof statusText === "string") ui.statusTool.textContent = statusText;
+      ui.statusTool.style.opacity = statusText ? "1" : "";
+    }
+
+    function tick(){
+      const k = 0.12;
+
+      progress.songsShown += (progress.songsTarget - progress.songsShown) * k;
+      progress.toolShown  += (progress.toolTarget  - progress.toolShown)  * k;
+
+      renderBar(ui.fillSongs, ui.pctSongs, progress.songsShown, ui.rowSongs);
+      renderBar(ui.fillTool,  ui.pctTool,  progress.toolShown,  ui.rowTool);
+
+      const closeEnough =
+        Math.abs(progress.songsShown - 1) < 0.006 &&
+        Math.abs(progress.toolShown  - 1) < 0.006;
+
+      if (progress.doneSongs && progress.doneTool && closeEnough){
+        finishLoading();
+        return;
+      }
+
+      requestAnimationFrame(tick);
+    }
+
+    function renderBar(fillEl, pctEl, value01, rowEl){
+      const pct = Math.round(clamp01(value01) * 100);
+      fillEl.style.width = pct + "%";
+      pctEl.textContent = pct + "%";
+
+      const barEl = rowEl.querySelector(".bar");
+      barEl.setAttribute("aria-valuenow", String(pct));
+    }
+
+    function finishLoading(){
+      ui.loader.setAttribute("aria-busy", "false");
+      ui.loader.classList.add("is-done");
+      ui.app.classList.add("ready");
+      document.body.style.overflow = "auto";
+    }
+
+    // -------- Data + UI logic --------
+
+    const ICON_EXTS = ["png","webp","jpg","jpeg","svg","gif"];
+
+    function escapeHtml(s){
+      return String(s)
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#39;");
+    }
+
+    async function headOk(url){
+      try{
+        const res = await fetch(url, { method: "HEAD", cache: "no-store" });
+        return res.ok;
+      }catch{
+        return false;
+      }
+    }
+
+    async function findIconUrlForSong(songName){
+      // If the song has their name (no extension) in Icons folder, load it.
+      // Since we don't know extension, try common ones.
+      // Example: /Icons/SHADOW.png or /Icons/SHADOW.webp etc.
+      for (const ext of ICON_EXTS){
+        const url = `./Icons/${encodeURIComponent(songName)}.${ext}`;
+        if (await headOk(url)) return url;
+      }
+      return null;
+    }
+
+    function showErrorBanner(){
+      ui.errorBanner.classList.add("show");
+      // auto-hide after a bit (still feels like a system error)
+      clearTimeout(showErrorBanner._t);
+      showErrorBanner._t = setTimeout(() => ui.errorBanner.classList.remove("show"), 2600);
+    }
+
+    function renderSongs(songs, sourceLabel){
+      ui.sourceMeta.textContent = `Source: ${sourceLabel}`;
+      ui.songCountPill.textContent = `${songs.length} song${songs.length === 1 ? "" : "s"}`;
+
+      ui.songList.innerHTML = "";
+      ui.emptyState.style.display = "none";
+
+      if (!songs.length){
+        ui.emptyState.style.display = "block";
+        ui.emptyState.innerHTML =
+          `No songs detected in <span class="pill">/Songs</span> yet.<br><br>
+           If your host disables directory listings, add <span class="pill">Songs/index.json</span> like:<br>
+           <span class="pill">["SongA","SongB"]</span>`;
+        return;
+      }
+
+      for (const songName of songs){
+        const card = document.createElement("div");
+        card.className = "song";
+        card.tabIndex = 0;
+
+        const iconBox = document.createElement("div");
+        iconBox.className = "iconbox";
+        iconBox.innerHTML = `<div class="icon-missing">X</div>`;
+
+        const info = document.createElement("div");
+        info.innerHTML = `
+          <div class="songname">${escapeHtml(songName)}</div>
+          <div class="songsub">Click to open (not implemented)</div>
+        `;
+
+        card.appendChild(iconBox);
+        card.appendChild(info);
+
+        // Click behavior: pulse red + shake + error banner
+        const triggerError = () => {
+          showErrorBanner();
+          card.classList.remove("error");
+          // force reflow so animation restarts every click
+          void card.offsetWidth;
+          card.classList.add("error");
+          // remove after anim
+          setTimeout(() => card.classList.remove("error"), 900);
+        };
+
+        card.addEventListener("click", triggerError);
+        card.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " "){
+            e.preventDefault();
+            triggerError();
+          }
+        });
+
+        ui.songList.appendChild(card);
+
+        // Lazy icon resolution (async)
+        (async () => {
+          const iconUrl = await findIconUrlForSong(songName);
+          if (iconUrl){
+            iconBox.innerHTML = `<img alt="${escapeHtml(songName)} icon" src="${iconUrl}">`;
+          } else {
+            iconBox.innerHTML = `<div class="icon-missing">X</div>`;
+          }
+        })();
+      }
+    }
+
+    // -------- Loading tasks --------
+
+    async function fetchJsonWithProgress(url, onProgress, statusPrefix){
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+
+      const contentLength = res.headers.get("Content-Length");
+      const total = contentLength ? Number(contentLength) : null;
+
+      if (!res.body || !total || !Number.isFinite(total)){
+        onProgress(0.65, `${statusPrefix} Reading…`);
+        const data = await res.json();
+        onProgress(1.0, `${statusPrefix} Done`);
+        return data;
+      }
+
+      const reader = res.body.getReader();
+      let received = 0;
+      const chunks = [];
+
+      onProgress(0.05, `${statusPrefix} Downloading…`);
+
+      while (true){
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        received += value.length;
+        const frac = received / total;
+        onProgress(0.05 + frac * 0.80, `${statusPrefix} Downloading… ${Math.round(frac*100)}%`);
+      }
+
+      onProgress(0.92, `${statusPrefix} Parsing…`);
+      const merged = new Uint8Array(received);
+      let offset = 0;
+      for (const c of chunks){
+        merged.set(c, offset);
+        offset += c.length;
+      }
+
+      const text = new TextDecoder("utf-8").decode(merged);
+      const data = JSON.parse(text);
+      onProgress(1.0, `${statusPrefix} Done`);
+      return data;
+    }
+
+    function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+    async function listSongsFromManifest(){
+      // Accept either:
+      // - ["SongA","SongB"]
+      // - { "songs": ["SongA","SongB"] }
+      const data = await fetchJsonWithProgress(
+        "./Songs/index.json",
+        (p, st) => setSongsProgress(p * 0.85, st),
+        "Songs"
+      );
+
+      let songs = [];
+      if (Array.isArray(data)) songs = data;
+      else if (data && Array.isArray(data.songs)) songs = data.songs;
+
+      songs = songs.map(String).map(s => s.trim()).filter(Boolean);
+      // de-dupe
+      songs = [...new Set(songs)];
+      return songs;
+    }
+
+    async function listSongsFromDirectoryListing(){
+      // Works if your host exposes an autoindex HTML page at /Songs/
+      const res = await fetch("./Songs/", { cache: "no-store" });
+      if (!res.ok) throw new Error("Directory listing not available");
+      const html = await res.text();
+
+      // parse anchors
+      const doc = new DOMParser().parseFromString(html, "text/html");
+      const links = [...doc.querySelectorAll("a[href]")].map(a => a.getAttribute("href") || "");
+
+      // Keep folder names (often end with /). Filter out parent links.
+      let names = links
+        .map(h => h.trim())
+        .filter(h => h && h !== "../" && h !== "./" && !h.startsWith("?"))
+        .map(h => decodeURIComponent(h))
+        .map(h => h.replace(/\/$/, "")) // remove trailing slash
+        .filter(h => h && h !== "." && h !== "..");
+
+      // Some autoindex lists files too — if you want ONLY folders, we can restrict later.
+      // For now, treat top-level entries as songs and ignore obvious index files.
+      names = names.filter(n => !n.toLowerCase().includes("index.json") && !n.toLowerCase().includes("index.html"));
+
+      // de-dupe
+      names = [...new Set(names)];
+      return names;
+    }
+
+    async function loadSongsAndIcons(){
+      try{
+        setSongsProgress(0.02, "Starting…");
+
+        // We load Songs list (manifest preferred, directory listing fallback)
+        let songs = [];
+        let source = "unknown";
+
+        try{
+          setSongsProgress(0.10, "Checking Songs/index.json…");
+          songs = await listSongsFromManifest();
+          source = "Songs/index.json";
+        } catch {
+          setSongsProgress(0.18, "No manifest. Scanning /Songs/ …");
+          songs = await listSongsFromDirectoryListing();
+          source = "Directory listing";
+        }
+
+        // Icons progress is mostly “we’ll resolve per-song after render”
+        // but we still show meaningful progress here.
+        setSongsProgress(0.92, "Building song list…");
+        renderSongs(songs, source);
+
+        setSongsProgress(1.0, "Ready");
+        progress.doneSongs = true;
+      } catch (err){
+        console.error(err);
+        setSongsProgress(1.0, "Loaded with warnings (check console)");
+        renderSongs([], "Failed (check console)");
+        progress.doneSongs = true;
+      }
+    }
+
+    async function loadTool(){
+      try{
+        setToolProgress(0.05, "Booting…");
+        await sleep(140);
+        setToolProgress(0.22, "Preparing UI…");
+        await sleep(180);
+        setToolProgress(0.50, "Attaching listeners…");
+        await sleep(160);
+        setToolProgress(0.78, "Final touches…");
+        await sleep(140);
+        setToolProgress(1.0, "Ready");
+        progress.doneTool = true;
+      } catch (err){
+        console.error(err);
+        setToolProgress(1.0, "Ready (with warnings)");
+        progress.doneTool = true;
+      }
+    }
+
+    // Start
+    (async function start(){
+      requestAnimationFrame(tick);
+      await Promise.all([ loadSongsAndIcons(), loadTool() ]);
+    })();
+  </script>
+</body>
+</html>
