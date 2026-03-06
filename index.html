@@ -6,137 +6,160 @@
   <title>Greambers Music Tool</title>
   <style>
     :root{
-      --bg:#0b0f17;--text:rgba(255,255,255,0.92);--muted:rgba(255,255,255,0.68);
-      --stroke:rgba(255,255,255,0.14);--accent:rgba(120,160,255,0.9);
-      --accent-dim:rgba(120,160,255,0.18);--barH:16px;--barW:min(640px,86vw);--radius:14px;
+      --bg:#0b0f17;--text:rgba(255,255,255,0.92);--muted:rgba(255,255,255,0.55);
+      --stroke:rgba(255,255,255,0.12);--accent:#7faaff;--accent-dim:rgba(127,170,255,0.15);
+      --barH:16px;--barW:min(640px,86vw);--radius:14px;
     }
     *{box-sizing:border-box;margin:0;padding:0;}
     html,body{height:100%;}
-    body{background:radial-gradient(1200px 700px at 70% 20%,rgba(120,160,255,0.12),transparent 55%),radial-gradient(900px 600px at 20% 70%,rgba(255,120,220,0.08),transparent 55%),var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;overflow:hidden;}
+    body{
+      background:
+        radial-gradient(1200px 700px at 70% 20%,rgba(120,160,255,0.13),transparent 55%),
+        radial-gradient(900px 600px at 20% 70%,rgba(255,120,220,0.09),transparent 55%),
+        var(--bg);
+      color:var(--text);
+      font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial;
+      overflow:hidden;
+    }
 
-    /* LOADER */
+    /* ── LOADER ── */
     #loader{position:fixed;inset:0;display:grid;place-items:center;z-index:9999;transition:opacity 420ms ease,transform 420ms ease;}
     #loader.is-done{opacity:0;transform:scale(1.01);pointer-events:none;}
-    .loader-stack{width:var(--barW);display:grid;gap:22px;padding:26px 18px;border-radius:22px;background:linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.04));border:1px solid var(--stroke);box-shadow:0 20px 80px rgba(0,0,0,0.55);backdrop-filter:blur(10px);position:relative;overflow:hidden;}
-    .loader-stack::before{content:"";position:absolute;inset:-2px;background:radial-gradient(700px 200px at 30% 0%,rgba(255,255,255,0.10),transparent 65%);pointer-events:none;}
+    .loader-stack{width:var(--barW);display:grid;gap:22px;padding:26px 18px;border-radius:22px;background:linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.04));border:1px solid var(--stroke);box-shadow:0 20px 80px rgba(0,0,0,0.6);backdrop-filter:blur(12px);position:relative;overflow:hidden;}
+    .loader-stack::before{content:"";position:absolute;inset:-2px;background:radial-gradient(700px 200px at 30% 0%,rgba(255,255,255,0.09),transparent 65%);pointer-events:none;}
     .load-row{display:grid;gap:10px;transform:translateY(-110vh);opacity:0;filter:blur(6px);}
     .load-row.drop-in{animation:dropIn 820ms cubic-bezier(.2,1.15,.2,1) forwards;}
-    .load-row.drop-in.delay-1{animation-delay:80ms;}.load-row.drop-in.delay-2{animation-delay:170ms;}
+    .load-row.drop-in.d1{animation-delay:80ms;}.load-row.drop-in.d2{animation-delay:170ms;}
     @keyframes dropIn{0%{transform:translateY(-110vh);opacity:0;filter:blur(8px);}60%{transform:translateY(14px);opacity:1;filter:blur(1px);}78%{transform:translateY(-6px);}100%{transform:translateY(0);filter:blur(0);}}
-    .lbl{font-size:15px;font-weight:600;color:var(--text);display:flex;align-items:baseline;justify-content:space-between;gap:12px;opacity:0;transform:translateY(8px);filter:blur(6px);}
-    .load-row.drop-in .lbl{animation:formUp 720ms cubic-bezier(.2,1,.2,1) forwards;animation-delay:380ms;}
-    .load-row.drop-in.delay-2 .lbl{animation-delay:470ms;}
-    @keyframes formUp{0%{opacity:0;transform:translateY(10px);filter:blur(7px);}100%{opacity:1;transform:translateY(0);filter:blur(0);}}
+    .lbl{font-size:15px;font-weight:600;display:flex;align-items:baseline;justify-content:space-between;gap:12px;opacity:0;transform:translateY(8px);filter:blur(6px);}
+    .load-row.drop-in .lbl{animation:fadeUp 720ms cubic-bezier(.2,1,.2,1) forwards;animation-delay:380ms;}
+    .load-row.drop-in.d2 .lbl{animation-delay:470ms;}
+    @keyframes fadeUp{0%{opacity:0;transform:translateY(10px);filter:blur(7px);}100%{opacity:1;transform:translateY(0);filter:blur(0);}}
     .pct{font-variant-numeric:tabular-nums;color:var(--muted);font-weight:600;min-width:56px;text-align:right;}
-    .bar{position:relative;height:var(--barH);border-radius:var(--radius);background:rgba(0,0,0,0.28);border:1px solid rgba(255,255,255,0.10);overflow:hidden;}
-    .fill{height:100%;width:0%;border-radius:var(--radius);background:linear-gradient(90deg,rgba(255,255,255,0.18),rgba(255,255,255,0.36),rgba(255,255,255,0.22));will-change:width;}
-    .bar::after{content:"";position:absolute;top:-60%;left:-40%;width:40%;height:220%;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.10),transparent);transform:skewX(-18deg);animation:shimmer 1.25s linear infinite;opacity:0.6;pointer-events:none;}
+    .bar{position:relative;height:var(--barH);border-radius:var(--radius);background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.09);overflow:hidden;}
+    .fill{height:100%;width:0%;border-radius:var(--radius);background:linear-gradient(90deg,rgba(255,255,255,0.16),rgba(255,255,255,0.34),rgba(255,255,255,0.20));will-change:width;}
+    .bar::after{content:"";position:absolute;top:-60%;left:-40%;width:40%;height:220%;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.09),transparent);transform:skewX(-18deg);animation:shimmer 1.3s linear infinite;pointer-events:none;}
     @keyframes shimmer{0%{left:-40%;}100%{left:110%;}}
-    .substatus{font-size:12.5px;color:var(--muted);margin-top:-2px;min-height:1.2em;opacity:0;filter:blur(6px);}
-    .load-row.drop-in .substatus{animation:formUp 700ms cubic-bezier(.2,1,.2,1) forwards;animation-delay:520ms;}
+    .substatus{font-size:12px;color:var(--muted);margin-top:-2px;min-height:1.2em;opacity:0;filter:blur(6px);}
+    .load-row.drop-in .substatus{animation:fadeUp 700ms cubic-bezier(.2,1,.2,1) forwards;animation-delay:520ms;}
 
-    /* APP */
+    /* ── APP ── */
     #app{position:fixed;inset:0;display:none;overflow:auto;padding:18px;padding-bottom:110px;}
     #app.ready{display:block;}
     .shell{max-width:1100px;margin:0 auto;display:grid;gap:14px;}
-    .topbar{position:sticky;top:0;z-index:10;border-radius:18px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.10);backdrop-filter:blur(10px);box-shadow:0 12px 40px rgba(0,0,0,0.35);overflow:hidden;}
+    .topbar{position:sticky;top:0;z-index:10;border-radius:18px;background:rgba(255,255,255,0.055);border:1px solid var(--stroke);backdrop-filter:blur(12px);box-shadow:0 12px 40px rgba(0,0,0,0.35);overflow:hidden;}
     .topbar-inner{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;}
-    .brand .title{font-size:16px;font-weight:800;line-height:1.1;}.brand .subtitle{font-size:12px;color:var(--muted);}
-    .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.10);color:rgba(255,255,255,0.82);font-size:12px;font-weight:700;}
-    .panel{border-radius:18px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.10);box-shadow:0 18px 70px rgba(0,0,0,0.35);overflow:hidden;}
-    .panel-head{padding:14px 14px 10px;display:flex;align-items:baseline;justify-content:space-between;gap:12px;border-bottom:1px solid rgba(255,255,255,0.08);}
-    .panel-head h2{font-size:15px;font-weight:700;}.panel-head .meta{color:var(--muted);font-size:12px;}
+    .brand .title{font-size:16px;font-weight:800;line-height:1.1;}
+    .brand .subtitle{font-size:12px;color:var(--muted);}
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:rgba(255,255,255,0.07);border:1px solid var(--stroke);color:rgba(255,255,255,0.8);font-size:12px;font-weight:700;}
+    .panel{border-radius:18px;background:rgba(255,255,255,0.045);border:1px solid var(--stroke);box-shadow:0 18px 70px rgba(0,0,0,0.35);overflow:hidden;}
+    .panel-head{padding:14px 14px 10px;display:flex;align-items:baseline;justify-content:space-between;gap:12px;border-bottom:1px solid rgba(255,255,255,0.07);}
+    .panel-head h2{font-size:15px;font-weight:700;}
+    .panel-head .meta{color:var(--muted);font-size:12px;}
     .songlist{padding:12px;display:grid;gap:10px;}
-    .song{display:grid;grid-template-columns:54px 1fr auto;gap:12px;align-items:center;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.10);cursor:pointer;user-select:none;transition:transform 140ms ease,background 140ms ease,border-color 140ms ease;position:relative;overflow:hidden;}
-    .song:hover{transform:translateY(-1px);background:rgba(255,255,255,0.065);border-color:rgba(255,255,255,0.16);}
-    .song.playing{background:var(--accent-dim);border-color:var(--accent);}
+    .song{display:grid;grid-template-columns:54px 1fr auto;gap:12px;align-items:center;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,0.045);border:1px solid var(--stroke);cursor:pointer;user-select:none;transition:transform 140ms ease,background 140ms ease,border-color 140ms ease;position:relative;overflow:hidden;}
+    .song:hover{transform:translateY(-1px);background:rgba(255,255,255,0.065);border-color:rgba(255,255,255,0.18);}
+    .song.playing{background:var(--accent-dim);border-color:rgba(127,170,255,0.45);}
     .song.playing .songname{color:var(--accent);}
-    .iconbox{width:54px;height:54px;border-radius:14px;display:grid;place-items:center;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.10);overflow:hidden;flex-shrink:0;position:relative;}
-    .iconbox img,.iconbox canvas{width:100%;height:100%;object-fit:cover;display:block;border-radius:14px;}
-    .icon-missing{font-size:22px;color:rgba(255,255,255,0.72);}
-    .songname{font-size:15px;font-weight:750;letter-spacing:0.2px;line-height:1.2;transition:color 200ms ease;}
+    /* iconbox: relative so we can hide the real img when flying */
+    .iconbox{width:54px;height:54px;border-radius:14px;display:grid;place-items:center;background:rgba(0,0,0,0.28);border:1px solid rgba(255,255,255,0.09);overflow:hidden;flex-shrink:0;position:relative;}
+    .iconbox img{width:100%;height:100%;object-fit:cover;display:block;border-radius:14px;}
+    .icon-ph{font-size:22px;color:rgba(255,255,255,0.65);}/* placeholder ♪ */
+    .songname{font-size:15px;font-weight:700;letter-spacing:0.15px;line-height:1.2;transition:color 200ms ease;}
     .songsub{margin-top:4px;font-size:12px;color:var(--muted);}
-    .song-play-btn{width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);display:grid;place-items:center;font-size:14px;flex-shrink:0;transition:background 140ms ease;}
-    .song:hover .song-play-btn{background:rgba(255,255,255,0.14);}
+    .song-play-btn{width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,0.14);background:rgba(255,255,255,0.07);display:grid;place-items:center;font-size:14px;flex-shrink:0;transition:background 140ms ease;}
+    .song:hover .song-play-btn{background:rgba(255,255,255,0.13);}
     .song.playing .song-play-btn{background:var(--accent);border-color:transparent;}
-    .empty{padding:18px 14px;color:var(--muted);font-size:13px;line-height:1.5;}
+    .empty{padding:18px 14px;color:var(--muted);font-size:13px;line-height:1.6;}
 
-    /* MINI BAR */
+    /* ── FLYING ICON (the real one that animates) ── */
+    #flyIcon{
+      position:fixed;
+      border-radius:14px;
+      overflow:hidden;
+      background:rgba(0,0,0,0.3);
+      border:1px solid rgba(255,255,255,0.12);
+      box-shadow:0 8px 40px rgba(0,0,0,0.5);
+      pointer-events:none;
+      z-index:500;
+      will-change:transform,width,height,border-radius;
+      display:none;
+    }
+    #flyIcon img,#flyIcon .icon-ph{
+      width:100%;height:100%;object-fit:cover;display:grid;place-items:center;font-size:28px;color:rgba(255,255,255,0.65);
+    }
+    #flyIcon.spinning{animation:spinCW 10s linear infinite;}
+    @keyframes spinCW{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+
+    /* ── MINI BAR ── */
     #miniBar{
-      position:fixed;bottom:0;left:0;right:0;height:72px;
-      background:rgba(11,15,23,0.92);border-top:1px solid rgba(255,255,255,0.10);
-      backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
-      display:flex;align-items:center;gap:14px;padding:0 18px;
+      position:fixed;bottom:0;left:0;right:0;height:76px;
+      background:rgba(10,14,22,0.92);border-top:1px solid rgba(255,255,255,0.09);
+      backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+      display:flex;align-items:center;gap:12px;padding:0 18px;
       z-index:200;
       transform:translateY(100%);
-      transition:transform 340ms cubic-bezier(.2,1,.2,1);
+      transition:transform 360ms cubic-bezier(.2,1,.2,1);
     }
     #miniBar.visible{transform:translateY(0);}
-    .mini-icon{width:44px;height:44px;border-radius:10px;overflow:hidden;flex-shrink:0;background:rgba(255,255,255,0.08);display:grid;place-items:center;font-size:20px;}
-    .mini-icon img{width:100%;height:100%;object-fit:cover;}
+    /* ghost icon slot in mini bar – will be empty when flyIcon is active */
+    #miniIconSlot{width:44px;height:44px;border-radius:10px;flex-shrink:0;}
     .mini-info{flex:1;min-width:0;}
     .mini-title{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-    .mini-scrubber-wrap{height:3px;border-radius:99px;background:rgba(255,255,255,0.12);cursor:pointer;margin-top:5px;position:relative;overflow:hidden;}
-    .mini-scrubber-fill{height:100%;width:0%;border-radius:99px;background:var(--accent);pointer-events:none;transition:width 0.25s linear;}
-    .mini-controls{display:flex;align-items:center;gap:8px;flex-shrink:0;}
-    .mini-btn{width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,0.14);background:rgba(255,255,255,0.06);display:grid;place-items:center;cursor:pointer;font-size:14px;color:var(--text);transition:background 140ms ease;}
-    .mini-btn:hover{background:rgba(255,255,255,0.12);}
-    .mini-btn.primary{background:var(--accent);border-color:transparent;font-size:16px;}
-    .mini-btn.primary:hover{background:rgba(140,175,255,0.95);}
-    .mini-fullscreen-btn{width:32px;height:32px;border-radius:8px;border:1px solid rgba(255,255,255,0.14);background:rgba(255,255,255,0.06);display:grid;place-items:center;cursor:pointer;font-size:13px;color:var(--text);transition:background 140ms ease;}
-    .mini-fullscreen-btn:hover{background:rgba(255,255,255,0.12);}
+    .scrub-wrap{height:3px;border-radius:99px;background:rgba(255,255,255,0.11);cursor:pointer;margin-top:6px;position:relative;overflow:hidden;}
+    .scrub-fill{height:100%;width:0%;border-radius:99px;background:var(--accent);pointer-events:none;}
+    .mini-right{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+    .m-btn{width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,0.13);background:rgba(255,255,255,0.06);display:grid;place-items:center;cursor:pointer;font-size:13px;color:var(--text);transition:background 130ms ease,transform 80ms ease;}
+    .m-btn:hover{background:rgba(255,255,255,0.11);}.m-btn:active{transform:scale(0.9);}
+    .m-btn.pp{width:40px;height:40px;font-size:16px;background:var(--accent);border-color:transparent;}
+    .m-btn.pp:hover{filter:brightness(1.1);}
+    .m-btn.fs{border-radius:9px;font-size:15px;}
+    /* volume */
+    .vol-wrap{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+    .vol-icon{font-size:14px;cursor:pointer;user-select:none;}
+    input[type=range].vol{-webkit-appearance:none;appearance:none;width:68px;height:3px;border-radius:99px;background:rgba(255,255,255,0.16);outline:none;cursor:pointer;}
+    input[type=range].vol::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--accent);cursor:pointer;}
+    input[type=range].vol::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--accent);border:none;}
 
-    /* FULLSCREEN PLAYER */
-    #fsPlayer{
-      position:fixed;inset:0;z-index:300;
-      display:flex;flex-direction:column;
+    /* ── FULLSCREEN OVERLAY ── */
+    #fsOverlay{
+      position:fixed;inset:0;z-index:400;
       background:rgba(8,12,20,0);
       pointer-events:none;
-      transition:background 600ms ease;
+      transition:background 500ms ease;
     }
-    #fsPlayer.active{background:rgba(8,12,20,0.97);pointer-events:all;}
+    #fsOverlay.active{background:rgba(8,12,20,0.96);pointer-events:all;}
 
-    .fs-content{
-      flex:1;display:flex;align-items:center;justify-content:flex-start;
-      padding:48px 56px;gap:48px;
-      opacity:0;transform:translateY(20px);
-      transition:opacity 400ms ease 200ms,transform 400ms ease 200ms;
+    /* FS content fades in after icon lands */
+    #fsContent{
+      position:absolute;
+      /* sits to the right of the icon landing zone (top-left area) */
+      top:56px;left:260px;right:48px;
+      display:flex;flex-direction:column;gap:22px;
+      opacity:0;transform:translateY(14px);
+      transition:opacity 320ms ease,transform 320ms ease;
     }
-    #fsPlayer.active .fs-content{opacity:1;transform:translateY(0);}
+    #fsOverlay.active #fsContent{opacity:1;transform:translateY(0);}
+    #fsTitle{font-size:clamp(20px,3vw,38px);font-weight:800;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .fs-scrub-wrap{position:relative;height:5px;border-radius:99px;background:rgba(255,255,255,0.11);cursor:pointer;overflow:hidden;}
+    .fs-scrub-fill{height:100%;width:0%;border-radius:99px;background:var(--accent);pointer-events:none;}
+    .fs-times{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:5px;}
+    .fs-controls{display:flex;align-items:center;gap:12px;}
+    .fs-btn{width:46px;height:46px;border-radius:50%;border:1px solid rgba(255,255,255,0.13);background:rgba(255,255,255,0.06);display:grid;place-items:center;cursor:pointer;font-size:17px;color:var(--text);transition:background 130ms ease,transform 80ms ease;}
+    .fs-btn:hover{background:rgba(255,255,255,0.11);}.fs-btn:active{transform:scale(0.92);}
+    .fs-btn.pp{width:60px;height:60px;font-size:22px;background:var(--accent);border-color:transparent;}
+    .fs-btn.pp:hover{filter:brightness(1.1);}
+    .fs-min{width:36px;height:36px;border-radius:9px;border:1px solid rgba(255,255,255,0.13);background:rgba(255,255,255,0.06);display:grid;place-items:center;cursor:pointer;font-size:16px;color:var(--muted);margin-left:auto;transition:background 130ms ease;}
+    .fs-min:hover{background:rgba(255,255,255,0.11);}
+    /* fs vol */
+    .fs-vol{display:flex;align-items:center;gap:8px;}
+    .fs-vol .vol-icon{font-size:16px;}
+    input[type=range].fsvol{-webkit-appearance:none;appearance:none;width:120px;height:4px;border-radius:99px;background:rgba(255,255,255,0.16);outline:none;cursor:pointer;}
+    input[type=range].fsvol::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent);}
+    input[type=range].fsvol::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--accent);border:none;}
 
-    /* spinning icon - top left area */
-    #fsIconWrap{
-      width:180px;height:180px;flex-shrink:0;
-      border-radius:22px;overflow:hidden;
-      background:rgba(255,255,255,0.08);
-      display:grid;place-items:center;
-      box-shadow:0 24px 80px rgba(0,0,0,0.6);
-      animation:none;
-    }
-    #fsIconWrap.spinning{animation:spinIcon 12s linear infinite;}
-    @keyframes spinIcon{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
-    #fsIconWrap img,#fsIconWrap .fs-icon-missing{width:100%;height:100%;object-fit:cover;border-radius:22px;display:block;}
-    .fs-icon-missing{font-size:56px;display:grid;place-items:center;}
-
-    .fs-right{flex:1;display:flex;flex-direction:column;gap:28px;min-width:0;}
-    #fsTitle{font-size:clamp(22px,3vw,40px);font-weight:800;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-    .fs-scrubber-wrap{position:relative;height:6px;border-radius:99px;background:rgba(255,255,255,0.12);cursor:pointer;overflow:hidden;}
-    .fs-scrubber-fill{height:100%;width:0%;border-radius:99px;background:var(--accent);pointer-events:none;transition:width 0.25s linear;}
-    .fs-times{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:4px;}
-    .fs-controls{display:flex;align-items:center;gap:14px;}
-    .fs-btn{width:48px;height:48px;border-radius:50%;border:1px solid rgba(255,255,255,0.14);background:rgba(255,255,255,0.06);display:grid;place-items:center;cursor:pointer;font-size:18px;color:var(--text);transition:background 140ms ease,transform 100ms ease;}
-    .fs-btn:hover{background:rgba(255,255,255,0.12);}.fs-btn:active{transform:scale(0.92);}
-    .fs-btn.primary{width:62px;height:62px;font-size:24px;background:var(--accent);border-color:transparent;}
-    .fs-btn.primary:hover{background:rgba(140,175,255,0.95);}
-    .fs-minimize-btn{width:38px;height:38px;border-radius:10px;border:1px solid rgba(255,255,255,0.14);background:rgba(255,255,255,0.06);display:grid;place-items:center;cursor:pointer;font-size:16px;color:var(--muted);transition:background 140ms ease;margin-left:auto;}
-    .fs-minimize-btn:hover{background:rgba(255,255,255,0.12);}
-
-    /* TRANSITION CANVAS overlay on iconbox */
-    .icon-transition-canvas{
-      position:absolute;inset:0;border-radius:14px;
-      pointer-events:none;opacity:0;
-    }
-    .icon-transition-canvas.animating{opacity:1;}
+    /* wipe canvas on song cards */
+    .wipe-canvas{position:absolute;inset:0;border-radius:14px;pointer-events:none;z-index:2;}
   </style>
 </head>
 <body>
@@ -144,15 +167,15 @@
 <!-- Loader -->
 <div id="loader" aria-live="polite" aria-busy="true">
   <div class="loader-stack">
-    <div class="load-row" id="rowSongs">
-      <div class="lbl"><span>Loading Songs…</span><span class="pct" id="pctSongs">0%</span></div>
-      <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="fill" id="fillSongs"></div></div>
-      <div class="substatus" id="statusSongs"></div>
+    <div class="load-row" id="rowS">
+      <div class="lbl"><span>Loading Songs…</span><span class="pct" id="pctS">0%</span></div>
+      <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="fill" id="fillS"></div></div>
+      <div class="substatus" id="subS"></div>
     </div>
-    <div class="load-row" id="rowTool">
-      <div class="lbl"><span>Loading tool…</span><span class="pct" id="pctTool">0%</span></div>
-      <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="fill" id="fillTool"></div></div>
-      <div class="substatus" id="statusTool"></div>
+    <div class="load-row" id="rowT">
+      <div class="lbl"><span>Loading tool…</span><span class="pct" id="pctT">0%</span></div>
+      <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="fill" id="fillT"></div></div>
+      <div class="substatus" id="subT"></div>
     </div>
   </div>
 </div>
@@ -163,356 +186,449 @@
     <div class="topbar">
       <div class="topbar-inner">
         <div class="brand"><div class="title">Greambers Music Tool</div><div class="subtitle">Songs list</div></div>
-        <div class="pill" id="songCountPill">0 songs</div>
+        <div class="pill" id="songPill">0 songs</div>
       </div>
     </div>
     <div class="panel">
-      <div class="panel-head"><h2>Songs</h2><div class="meta" id="sourceMeta">Source: detecting…</div></div>
+      <div class="panel-head"><h2>Songs</h2><div class="meta" id="srcMeta">Source: detecting…</div></div>
       <div class="songlist" id="songList"></div>
       <div class="empty" id="emptyState" style="display:none;"></div>
     </div>
   </div>
 </div>
 
-<!-- Mini Bar -->
+<!-- Flying icon (shared, travels between card and FS) -->
+<div id="flyIcon"><div class="icon-ph">♪</div></div>
+
+<!-- Mini bar -->
 <div id="miniBar">
-  <div class="mini-icon" id="miniIcon"><span>♪</span></div>
+  <div id="miniIconSlot"></div>
   <div class="mini-info">
     <div class="mini-title" id="miniTitle">No song selected</div>
-    <div class="mini-scrubber-wrap" id="miniScrubWrap"><div class="mini-scrubber-fill" id="miniScrubFill"></div></div>
+    <div class="scrub-wrap" id="miniScrub"><div class="scrub-fill" id="miniScrubFill"></div></div>
   </div>
-  <div class="mini-controls">
-    <div class="mini-btn" id="miniBtnPrev" title="Previous">⏮</div>
-    <div class="mini-btn primary" id="miniBtnPlay" title="Play/Pause">▶</div>
-    <div class="mini-btn" id="miniBtnNext" title="Next">⏭</div>
-    <div class="mini-fullscreen-btn" id="btnFullscreen" title="Full screen">⛶</div>
+  <div class="mini-right">
+    <div class="vol-wrap">
+      <span class="vol-icon" id="volIcon">🔊</span>
+      <input type="range" class="vol" id="volSlider" min="0" max="1" step="0.01" value="1">
+    </div>
+    <div class="m-btn" id="mPrev">⏮</div>
+    <div class="m-btn pp" id="mPlay">▶</div>
+    <div class="m-btn" id="mNext">⏭</div>
+    <div class="m-btn fs" id="mFS" title="Expand">⛶</div>
   </div>
 </div>
 
-<!-- Fullscreen Player -->
-<div id="fsPlayer">
-  <div class="fs-content">
-    <div id="fsIconWrap"><div class="fs-icon-missing">♪</div></div>
-    <div class="fs-right">
-      <div id="fsTitle">—</div>
-      <div>
-        <div class="fs-scrubber-wrap" id="fsScrubWrap"><div class="fs-scrubber-fill" id="fsScrubFill"></div></div>
-        <div class="fs-times"><span id="fsCurrent">0:00</span><span id="fsDuration">0:00</span></div>
+<!-- Fullscreen overlay -->
+<div id="fsOverlay">
+  <div id="fsContent">
+    <div id="fsTitle">—</div>
+    <div>
+      <div class="fs-scrub-wrap" id="fsScrub"><div class="fs-scrub-fill" id="fsScrubFill"></div></div>
+      <div class="fs-times"><span id="fsCur">0:00</span><span id="fsDur">0:00</span></div>
+    </div>
+    <div class="fs-controls">
+      <div class="fs-btn" id="fsPrev">⏮</div>
+      <div class="fs-btn pp" id="fsPlay">▶</div>
+      <div class="fs-btn" id="fsNext">⏭</div>
+      <div class="fs-vol">
+        <span class="vol-icon" id="fsVolIcon">🔊</span>
+        <input type="range" class="fsvol" id="fsVolSlider" min="0" max="1" step="0.01" value="1">
       </div>
-      <div class="fs-controls">
-        <div class="fs-btn" id="fsBtnPrev">⏮</div>
-        <div class="fs-btn primary" id="fsBtnPlay">▶</div>
-        <div class="fs-btn" id="fsBtnNext">⏭</div>
-        <div class="fs-minimize-btn" id="btnMinimize" title="Minimize">⊟</div>
-      </div>
+      <div class="fs-min" id="fsMin" title="Minimize">⊟</div>
     </div>
   </div>
 </div>
 
 <script>
-const AUDIO_EXTS=["mp3","ogg","wav","flac","m4a","aac"];
-const ICON_EXTS=["png","webp","jpg","jpeg","svg","gif"];
+'use strict';
+const AUDIO_EXTS=['mp3','ogg','wav','flac','m4a','aac'];
+const ICON_EXTS=['png','jpg','jpeg','webp','gif','svg'];
 
-// UI refs
+function $id(id){return document.getElementById(id);}
 const ui={
-  loader:el("loader"),app:el("app"),
-  rowSongs:el("rowSongs"),fillSongs:el("fillSongs"),pctSongs:el("pctSongs"),statusSongs:el("statusSongs"),
-  rowTool:el("rowTool"),fillTool:el("fillTool"),pctTool:el("pctTool"),statusTool:el("statusTool"),
-  songList:el("songList"),emptyState:el("emptyState"),songCountPill:el("songCountPill"),sourceMeta:el("sourceMeta"),
-  miniBar:el("miniBar"),miniIcon:el("miniIcon"),miniTitle:el("miniTitle"),
-  miniScrubWrap:el("miniScrubWrap"),miniScrubFill:el("miniScrubFill"),
-  miniBtnPlay:el("miniBtnPlay"),miniBtnPrev:el("miniBtnPrev"),miniBtnNext:el("miniBtnNext"),
-  btnFullscreen:el("btnFullscreen"),
-  fsPlayer:el("fsPlayer"),fsIconWrap:el("fsIconWrap"),fsTitle:el("fsTitle"),
-  fsScrubWrap:el("fsScrubWrap"),fsScrubFill:el("fsScrubFill"),
-  fsCurrent:el("fsCurrent"),fsDuration:el("fsDuration"),
-  fsBtnPlay:el("fsBtnPlay"),fsBtnPrev:el("fsBtnPrev"),fsBtnNext:el("fsBtnNext"),
-  btnMinimize:el("btnMinimize"),
+  loader:$id('loader'),app:$id('app'),
+  rowS:$id('rowS'),fillS:$id('fillS'),pctS:$id('pctS'),subS:$id('subS'),
+  rowT:$id('rowT'),fillT:$id('fillT'),pctT:$id('pctT'),subT:$id('subT'),
+  songList:$id('songList'),emptyState:$id('emptyState'),
+  songPill:$id('songPill'),srcMeta:$id('srcMeta'),
+  flyIcon:$id('flyIcon'),
+  miniBar:$id('miniBar'),miniIconSlot:$id('miniIconSlot'),
+  miniTitle:$id('miniTitle'),miniScrub:$id('miniScrub'),miniScrubFill:$id('miniScrubFill'),
+  volIcon:$id('volIcon'),volSlider:$id('volSlider'),
+  mPrev:$id('mPrev'),mPlay:$id('mPlay'),mNext:$id('mNext'),mFS:$id('mFS'),
+  fsOverlay:$id('fsOverlay'),fsContent:$id('fsContent'),fsTitle:$id('fsTitle'),
+  fsScrub:$id('fsScrub'),fsScrubFill:$id('fsScrubFill'),
+  fsCur:$id('fsCur'),fsDur:$id('fsDur'),
+  fsPrev:$id('fsPrev'),fsPlay:$id('fsPlay'),fsNext:$id('fsNext'),fsMin:$id('fsMin'),
+  fsVolIcon:$id('fsVolIcon'),fsVolSlider:$id('fsVolSlider'),
 };
-function el(id){return document.getElementById(id);}
 
-// Loader plumbing
-requestAnimationFrame(()=>{ui.rowSongs.classList.add("drop-in","delay-1");ui.rowTool.classList.add("drop-in","delay-2");});
-function clamp01(n){return Math.max(0,Math.min(1,n));}
-const prog={st:0,tt:0,ss:0,ts:0,dS:false,dT:false};
-function setS(v,s){prog.st=clamp01(v);if(s!=null){ui.statusSongs.textContent=s;ui.statusSongs.style.opacity="1";}}
-function setT(v,s){prog.tt=clamp01(v);if(s!=null){ui.statusTool.textContent=s;ui.statusTool.style.opacity="1";}}
+// ── Loader ──
+requestAnimationFrame(()=>{
+  ui.rowS.classList.add('drop-in','d1');
+  ui.rowT.classList.add('drop-in','d2');
+});
+function clamp(n){return Math.max(0,Math.min(1,n));}
+const pg={st:0,tt:0,ss:0,ts:0,dS:false,dT:false};
+function setSP(v,s){pg.st=clamp(v);if(s!=null){ui.subS.textContent=s;ui.subS.style.opacity='1';}}
+function setTP(v,s){pg.tt=clamp(v);if(s!=null){ui.subT.textContent=s;ui.subT.style.opacity='1';}}
 function tick(){
   const k=0.12;
-  prog.ss+=(prog.st-prog.ss)*k;prog.ts+=(prog.tt-prog.ts)*k;
-  rBar(ui.fillSongs,ui.pctSongs,prog.ss,ui.rowSongs);rBar(ui.fillTool,ui.pctTool,prog.ts,ui.rowTool);
-  if(prog.dS&&prog.dT&&Math.abs(prog.ss-1)<0.006&&Math.abs(prog.ts-1)<0.006){finishLoad();return;}
+  pg.ss+=(pg.st-pg.ss)*k;pg.ts+=(pg.tt-pg.ts)*k;
+  rBar(ui.fillS,ui.pctS,pg.ss,ui.rowS);rBar(ui.fillT,ui.pctT,pg.ts,ui.rowT);
+  if(pg.dS&&pg.dT&&Math.abs(pg.ss-1)<0.006&&Math.abs(pg.ts-1)<0.006){doneLoad();return;}
   requestAnimationFrame(tick);
 }
-function rBar(f,p,v,r){const pct=Math.round(clamp01(v)*100);f.style.width=pct+"%";p.textContent=pct+"%";r.querySelector(".bar").setAttribute("aria-valuenow",String(pct));}
-function finishLoad(){ui.loader.setAttribute("aria-busy","false");ui.loader.classList.add("is-done");ui.app.classList.add("ready");document.body.style.overflow="auto";}
+function rBar(f,p,v,r){const pct=Math.round(clamp(v)*100);f.style.width=pct+'%';p.textContent=pct+'%';r.querySelector('.bar').setAttribute('aria-valuenow',String(pct));}
+function doneLoad(){ui.loader.setAttribute('aria-busy','false');ui.loader.classList.add('is-done');ui.app.classList.add('ready');document.body.style.overflow='auto';}
 
-// ── Audio engine ──
+// ── Audio ──
 const audio=new Audio();
-let songs=[],curIdx=-1,cards=[],iconUrls=[],isFullscreen=false;
+let songs=[],curIdx=-1,cards=[],iconUrls=[];
+let isFull=false;
+audio.volume=1;
 
-function fmt(s){if(!isFinite(s)||isNaN(s))return"0:00";const m=Math.floor(s/60),sec=Math.floor(s%60);return`${m}:${sec.toString().padStart(2,"0")}`;}
-function esc(s){return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#39;");}
+function fmt(s){if(!isFinite(s)||isNaN(s))return'0:00';const m=Math.floor(s/60),sec=Math.floor(s%60);return`${m}:${sec.toString().padStart(2,'0')}`;}
+function esc(s){return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');}
 
-audio.addEventListener("timeupdate",()=>{
+audio.addEventListener('timeupdate',()=>{
   const p=audio.duration?(audio.currentTime/audio.duration)*100:0;
-  ui.miniScrubFill.style.width=p+"%";
-  ui.fsScrubFill.style.width=p+"%";
-  ui.fsCurrent.textContent=fmt(audio.currentTime);
+  ui.miniScrubFill.style.width=p+'%';
+  ui.fsScrubFill.style.width=p+'%';
+  ui.fsCur.textContent=fmt(audio.currentTime);
 });
-audio.addEventListener("loadedmetadata",()=>{ui.fsDuration.textContent=fmt(audio.duration);});
-audio.addEventListener("ended",()=>playIdx(curIdx+1));
-audio.addEventListener("play",()=>setPlayBtns("⏸"));
-audio.addEventListener("pause",()=>setPlayBtns("▶"));
+audio.addEventListener('loadedmetadata',()=>{ui.fsDur.textContent=fmt(audio.duration);});
+audio.addEventListener('ended',()=>playIdx(curIdx+1));
+audio.addEventListener('play',()=>setPlaySymbol('⏸'));
+audio.addEventListener('pause',()=>setPlaySymbol('▶'));
 
-function setPlayBtns(sym){ui.miniBtnPlay.textContent=sym;ui.fsBtnPlay.textContent=sym;if(cards[curIdx]){const b=cards[curIdx].querySelector(".song-play-btn");if(b)b.textContent=sym;}}
+function setPlaySymbol(s){
+  ui.mPlay.textContent=s;ui.fsPlay.textContent=s;
+  if(cards[curIdx]){const b=cards[curIdx].querySelector('.song-play-btn');if(b)b.textContent=s;}
+}
+
+// volume
+function syncVol(){
+  const v=audio.volume;
+  ui.volSlider.value=v;ui.fsVolSlider.value=v;
+  const ic=v<0.05?'🔇':v<0.5?'🔉':'🔊';
+  ui.volIcon.textContent=ic;ui.fsVolIcon.textContent=ic;
+}
+ui.volSlider.addEventListener('input',()=>{audio.volume=+ui.volSlider.value;syncVol();});
+ui.fsVolSlider.addEventListener('input',()=>{audio.volume=+ui.fsVolSlider.value;syncVol();});
 
 // scrubbers
-[ui.miniScrubWrap,ui.fsScrubWrap].forEach(wrap=>{
-  wrap.addEventListener("click",e=>{
-    if(!audio.duration)return;
-    const r=wrap.getBoundingClientRect();
-    audio.currentTime=((e.clientX-r.left)/r.width)*audio.duration;
-  });
-});
+[ui.miniScrub,ui.fsScrub].forEach(w=>w.addEventListener('click',e=>{
+  if(!audio.duration)return;
+  const r=w.getBoundingClientRect();
+  audio.currentTime=((e.clientX-r.left)/r.width)*audio.duration;
+}));
 
 // controls
-ui.miniBtnPlay.addEventListener("click",togglePlay);
-ui.fsBtnPlay.addEventListener("click",togglePlay);
-ui.miniBtnPrev.addEventListener("click",()=>playIdx(curIdx-1));
-ui.fsBtnPrev.addEventListener("click",()=>playIdx(curIdx-1));
-ui.miniBtnNext.addEventListener("click",()=>playIdx(curIdx+1));
-ui.fsBtnNext.addEventListener("click",()=>playIdx(curIdx+1));
-ui.btnFullscreen.addEventListener("click",openFullscreen);
-ui.btnMinimize.addEventListener("click",closeFullscreen);
-
+ui.mPlay.addEventListener('click',togglePlay);ui.fsPlay.addEventListener('click',togglePlay);
+ui.mPrev.addEventListener('click',()=>playIdx(curIdx-1));ui.fsPrev.addEventListener('click',()=>playIdx(curIdx-1));
+ui.mNext.addEventListener('click',()=>playIdx(curIdx+1));ui.fsNext.addEventListener('click',()=>playIdx(curIdx+1));
+ui.mFS.addEventListener('click',openFS);
+ui.fsMin.addEventListener('click',closeFS);
 function togglePlay(){if(curIdx<0)return;audio.paused?audio.play():audio.pause();}
 
-function openFullscreen(){
-  isFullscreen=true;
-  ui.fsPlayer.classList.add("active");
-  ui.fsIconWrap.classList.add("spinning");
-  updateFsIcon();
-}
-function closeFullscreen(){
-  isFullscreen=false;
-  ui.fsIconWrap.classList.remove("spinning");
-  ui.fsPlayer.classList.remove("active");
+// ── FLIP icon animation ──
+// The flyIcon element travels between the card iconbox position and the FS landing zone (top-left ~56,48).
+const FS_TARGET={x:48,y:56,size:190,br:22}; // where icon lands in fullscreen
+
+function getCardIconRect(idx){
+  if(idx<0||!cards[idx])return null;
+  const box=cards[idx].querySelector('.iconbox');
+  if(!box)return null;
+  return box.getBoundingClientRect();
 }
 
-function updateFsIcon(){
-  const url=iconUrls[curIdx]||null;
-  if(url){
-    ui.fsIconWrap.innerHTML=`<img src="${url}" alt="">`;
-  } else {
-    ui.fsIconWrap.innerHTML=`<div class="fs-icon-missing">♪</div>`;
-  }
-}
-function updateMiniIcon(){
-  const url=iconUrls[curIdx]||null;
-  if(url){
-    ui.miniIcon.innerHTML=`<img src="${url}" alt="">`;
-  } else {
-    ui.miniIcon.innerHTML=`<span>♪</span>`;
-  }
+function setFlyStyle(x,y,size,br,spin){
+  const fly=ui.flyIcon;
+  fly.style.left=x+'px';
+  fly.style.top=y+'px';
+  fly.style.width=size+'px';
+  fly.style.height=size+'px';
+  fly.style.borderRadius=br+'px';
+  if(spin)fly.classList.add('spinning');
+  else fly.classList.remove('spinning');
 }
 
-// ── Wipe transition on song change ──
-async function wipeTransition(card){
+function setFlyContent(idx){
+  const url=iconUrls[idx]||null;
+  ui.flyIcon.innerHTML=url?`<img src="${url}" alt="">`:`<div class="icon-ph" style="font-size:${Math.round(ui.flyIcon.offsetWidth*0.32)||28}px">♪</div>`;
+}
+
+function animateFly(fromRect,toRect,fromBr,toBr,duration,onMid,onDone,spin){
   return new Promise(res=>{
-    const box=card.querySelector(".iconbox");
-    if(!box){res();return;}
-    // create canvas overlay
-    let cv=box.querySelector(".icon-transition-canvas");
-    if(!cv){cv=document.createElement("canvas");cv.className="icon-transition-canvas";box.appendChild(cv);}
-    cv.width=box.offsetWidth||54;cv.height=box.offsetHeight||54;
-    const ctx=cv.getContext("2d");
-    cv.classList.add("animating");
-    const w=cv.width,h=cv.height;
-    const duration=420;
-    const start=performance.now();
-    // wipe: angled shadow bar sweeping left→right (slightly tilted left = negative skew)
-    function frame(now){
-      const t=Math.min((now-start)/duration,1);
-      ctx.clearRect(0,0,w,h);
-      // draw dark wipe rectangle angled ~-10deg
-      const x=t*(w+60)-30;
-      ctx.save();
-      ctx.fillStyle="rgba(0,0,0,0.82)";
-      ctx.beginPath();
-      const skew=h*0.18; // angle offset
-      ctx.moveTo(x-40+skew,0);
-      ctx.lineTo(x+skew,0);
-      ctx.lineTo(x-skew,h);
-      ctx.lineTo(x-40-skew,h);
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
-      if(t<1){requestAnimationFrame(frame);}
-      else{cv.classList.remove("animating");ctx.clearRect(0,0,w,h);res();}
-    }
-    requestAnimationFrame(frame);
+    const fly=ui.flyIcon;
+    fly.style.display='block';
+    fly.style.transition='none';
+    // place at start
+    fly.style.left=fromRect.x+'px';
+    fly.style.top=fromRect.y+'px';
+    fly.style.width=fromRect.width+'px';
+    fly.style.height=fromRect.height+'px';
+    fly.style.borderRadius=fromBr+'px';
+    // force reflow
+    fly.getBoundingClientRect();
+    // animate to dest
+    fly.style.transition=`left ${duration}ms cubic-bezier(.4,0,.2,1),top ${duration}ms cubic-bezier(.4,0,.2,1),width ${duration}ms cubic-bezier(.4,0,.2,1),height ${duration}ms cubic-bezier(.4,0,.2,1),border-radius ${duration}ms ease`;
+    fly.style.left=toRect.x+'px';
+    fly.style.top=toRect.y+'px';
+    fly.style.width=toRect.width+'px';
+    fly.style.height=toRect.height+'px';
+    fly.style.borderRadius=toBr+'px';
+    if(spin)fly.classList.add('spinning');
+    setTimeout(()=>{if(onMid)onMid();},duration*0.55);
+    setTimeout(()=>{if(onDone)onDone();res();},duration);
   });
 }
 
-// ── Typewriter title transition ──
-let typewriterTimeout=null;
-async function typewriterChange(newTitle){
-  clearTimeout(typewriterTimeout);
-  // Delete existing
-  let current=ui.miniTitle.textContent;
-  await new Promise(res=>{
+// hide/show the src iconbox img so the card looks empty while flyIcon travels
+function hideCardImg(idx,hide){
+  if(idx<0||!cards[idx])return;
+  const box=cards[idx].querySelector('.iconbox');
+  if(box)box.style.opacity=hide?'0':'1';
+}
+
+async function openFS(){
+  if(curIdx<0||isFull)return;
+  isFull=true;
+  const cardRect=getCardIconRect(curIdx);
+  if(!cardRect){ui.fsOverlay.classList.add('active');return;}
+  const toRect={x:FS_TARGET.x,y:FS_TARGET.y,width:FS_TARGET.size,height:FS_TARGET.size};
+  setFlyContent(curIdx);
+  hideCardImg(curIdx,true);
+  // overlay fades in
+  ui.fsOverlay.classList.add('active');
+  await animateFly(
+    {x:cardRect.left,y:cardRect.top,width:cardRect.width,height:cardRect.height},
+    toRect,14,FS_TARGET.br,480,null,null,true
+  );
+  // after landing, leave flyIcon sitting there spinning
+}
+
+async function closeFS(){
+  if(!isFull)return;
+  isFull=false;
+  ui.fsOverlay.classList.remove('active');
+  const fly=ui.flyIcon;
+  const cardRect=getCardIconRect(curIdx);
+  if(!cardRect){fly.style.display='none';hideCardImg(curIdx,false);return;}
+  fly.classList.remove('spinning');
+  const fromRect={x:FS_TARGET.x,y:FS_TARGET.y,width:FS_TARGET.size,height:FS_TARGET.size};
+  await animateFly(
+    fromRect,
+    {x:cardRect.left,y:cardRect.top,width:cardRect.width,height:cardRect.height},
+    FS_TARGET.br,14,400,null,null,false
+  );
+  fly.style.display='none';
+  hideCardImg(curIdx,false);
+}
+
+// ── Song wipe transition on card icon when switching ──
+function doWipe(idx){
+  if(idx<0||!cards[idx])return;
+  const box=cards[idx].querySelector('.iconbox');
+  if(!box)return;
+  let cv=box.querySelector('.wipe-canvas');
+  if(!cv){cv=document.createElement('canvas');cv.className='wipe-canvas';box.appendChild(cv);}
+  const w=box.offsetWidth||54,h=box.offsetHeight||54;
+  cv.width=w;cv.height=h;
+  const ctx=cv.getContext('2d');
+  cv.style.display='block';
+  const dur=400,start=performance.now();
+  function frame(now){
+    const t=Math.min((now-start)/dur,1);
+    ctx.clearRect(0,0,w,h);
+    const x=t*(w+60)-20;
+    const sk=h*0.15;
+    ctx.fillStyle='rgba(0,0,0,0.85)';
+    ctx.beginPath();
+    ctx.moveTo(x-44+sk,0);ctx.lineTo(x+sk,0);ctx.lineTo(x-sk,h);ctx.lineTo(x-44-sk,h);
+    ctx.closePath();ctx.fill();
+    if(t<1)requestAnimationFrame(frame);
+    else{ctx.clearRect(0,0,w,h);cv.style.display='none';}
+  }
+  requestAnimationFrame(frame);
+}
+
+// ── Typewriter ──
+let twTimer=null;
+function typewriter(newText){
+  return new Promise(res=>{
+    clearTimeout(twTimer);
+    let cur=ui.miniTitle.textContent;
     function del(){
-      if(current.length===0){res();return;}
-      current=current.slice(0,-1);
-      ui.miniTitle.textContent=current;
-      typewriterTimeout=setTimeout(del,40);
+      if(!cur.length){type();return;}
+      cur=cur.slice(0,-1);
+      ui.miniTitle.textContent=cur;
+      ui.fsTitle.textContent=cur;
+      twTimer=setTimeout(del,36);
+    }
+    function type(){
+      if(cur.length>=newText.length){res();return;}
+      cur+=newText[cur.length];
+      ui.miniTitle.textContent=cur;
+      ui.fsTitle.textContent=cur;
+      twTimer=setTimeout(type,48);
     }
     del();
   });
-  // also clear fs title
-  ui.fsTitle.textContent="";
-  // Type new
-  let i=0;
-  await new Promise(res=>{
-    function type(){
-      if(i>=newTitle.length){res();return;}
-      current+=newTitle[i];i++;
-      ui.miniTitle.textContent=current;
-      ui.fsTitle.textContent=current;
-      typewriterTimeout=setTimeout(type,50);
-    }
-    type();
-  });
 }
 
-// ── Play a song ──
+// ── Play index ──
 async function playIdx(idx){
   if(!songs.length)return;
   idx=((idx%songs.length)+songs.length)%songs.length;
   const name=songs[idx];
   const prevIdx=curIdx;
 
-  // wipe old card icon
-  if(prevIdx>=0&&prevIdx!==idx&&cards[prevIdx]){
-    wipeTransition(cards[prevIdx]);
+  // If switching while fullscreen: animate old icon back, wipe it, then fly new one up
+  if(isFull&&prevIdx>=0&&prevIdx!==idx){
+    // shrink old icon back to card
+    isFull=false;
+    ui.fsOverlay.classList.remove('active');
+    const fly=ui.flyIcon;
+    fly.classList.remove('spinning');
+    const oldCardRect=getCardIconRect(prevIdx);
+    if(oldCardRect){
+      const fromRect={x:FS_TARGET.x,y:FS_TARGET.y,width:FS_TARGET.size,height:FS_TARGET.size};
+      await animateFly(fromRect,{x:oldCardRect.left,y:oldCardRect.top,width:oldCardRect.width,height:oldCardRect.height},FS_TARGET.br,14,340,null,null,false);
+    }
+    fly.style.display='none';
+    hideCardImg(prevIdx,false);
+    doWipe(prevIdx);
+    isFull=true; // will re-open for new song
+  } else if(prevIdx>=0&&prevIdx!==idx){
+    doWipe(prevIdx);
   }
 
-  // update scrubber to start instantly
-  ui.miniScrubFill.style.transition="none";
-  ui.fsScrubFill.style.transition="none";
-  ui.miniScrubFill.style.width="0%";
-  ui.fsScrubFill.style.width="0%";
-  setTimeout(()=>{ui.miniScrubFill.style.transition="";ui.fsScrubFill.style.transition="";},50);
+  // reset scrubber
+  ui.miniScrubFill.style.transition='none';ui.fsScrubFill.style.transition='none';
+  ui.miniScrubFill.style.width='0%';ui.fsScrubFill.style.width='0%';
+  requestAnimationFrame(()=>{ui.miniScrubFill.style.transition='';ui.fsScrubFill.style.transition='';});
 
   curIdx=idx;
   markPlaying(idx);
-  ui.miniBar.classList.add("visible");
-  updateMiniIcon();
-  if(isFullscreen)updateFsIcon();
+  ui.miniBar.classList.add('visible');
 
-  // typewriter title
-  typewriterChange(name);
+  // typewriter
+  typewriter(name);
+
+  // if we should be showing fullscreen, fly new icon up
+  if(isFull){
+    ui.fsOverlay.classList.add('active');
+    const newCardRect=getCardIconRect(idx);
+    if(newCardRect){
+      setFlyContent(idx);
+      hideCardImg(idx,true);
+      const toRect={x:FS_TARGET.x,y:FS_TARGET.y,width:FS_TARGET.size,height:FS_TARGET.size};
+      animateFly({x:newCardRect.left,y:newCardRect.top,width:newCardRect.width,height:newCardRect.height},toRect,14,FS_TARGET.br,460,null,null,true);
+    }
+  }
 
   // find & play audio
   const url=await findAudio(name);
-  if(!url){setPlayBtns("▶");return;}
-  audio.src=url;
-  audio.play().catch(()=>{});
+  if(url){audio.src=url;audio.play().catch(()=>{});}
 }
 
 function markPlaying(idx){
   cards.forEach((c,i)=>{
-    c.classList.toggle("playing",i===idx);
-    const b=c.querySelector(".song-play-btn");
-    if(b)b.textContent=i===idx&&!audio.paused?"⏸":"▶";
+    c.classList.toggle('playing',i===idx);
+    const b=c.querySelector('.song-play-btn');
+    if(b)b.textContent=i===idx&&!audio.paused?'⏸':'▶';
   });
 }
 
 async function findAudio(name){
   for(const ext of AUDIO_EXTS){
     const url=`./Songs/${encodeURIComponent(name)}.${ext}`;
-    try{const r=await fetch(url,{method:"HEAD",cache:"no-store"});if(r.ok)return url;}catch{}
+    try{const r=await fetch(url,{method:'HEAD',cache:'no-store'});if(r.ok)return url;}catch{}
   }
   return null;
 }
-
-async function headOk(url){try{const r=await fetch(url,{method:"HEAD",cache:"no-store"});return r.ok;}catch{return false;}}
 async function findIcon(name){
-  for(const ext of ICON_EXTS){const u=`./Icons/${encodeURIComponent(name)}.${ext}`;if(await headOk(u))return u;}
+  for(const ext of ICON_EXTS){
+    const url=`./Icons/${encodeURIComponent(name)}.${ext}`;
+    try{const r=await fetch(url,{method:'HEAD',cache:'no-store'});if(r.ok)return url;}catch{}
+  }
   return null;
 }
 
 // ── Render songs ──
 function renderSongs(list,src){
-  ui.sourceMeta.textContent=`Source: ${src}`;
-  ui.songCountPill.textContent=`${list.length} song${list.length===1?"":"s"}`;
-  ui.songList.innerHTML="";ui.emptyState.style.display="none";
+  ui.srcMeta.textContent=`Source: ${src}`;
+  ui.songPill.textContent=`${list.length} song${list.length===1?'':'s'}`;
+  ui.songList.innerHTML='';ui.emptyState.style.display='none';
   songs=list;cards=[];iconUrls=new Array(list.length).fill(null);
   if(!list.length){
-    ui.emptyState.style.display="block";
-    ui.emptyState.innerHTML=`No songs found in <span class="pill">Songs/index.json</span>.<br><br>Make sure <span class="pill">Songs/index.json</span> is committed to your repo.`;
+    ui.emptyState.style.display='block';
+    ui.emptyState.innerHTML=`No songs found in <span class="pill">Songs/index.json</span>.<br><br>Make sure <span class="pill">Songs/index.json</span> is committed and Netlify has run the build script.`;
     return;
   }
   list.forEach((name,idx)=>{
-    const card=document.createElement("div");card.className="song";card.tabIndex=0;
-    const iconBox=document.createElement("div");iconBox.className="iconbox";
-    iconBox.innerHTML=`<div class="icon-missing">♪</div>`;
-    const info=document.createElement("div");
+    const card=document.createElement('div');card.className='song';card.tabIndex=0;
+    const iconBox=document.createElement('div');iconBox.className='iconbox';
+    iconBox.innerHTML=`<div class="icon-ph">♪</div>`;
+    const info=document.createElement('div');
     info.innerHTML=`<div class="songname">${esc(name)}</div><div class="songsub">Click to play</div>`;
-    const btn=document.createElement("div");btn.className="song-play-btn";btn.textContent="▶";
+    const btn=document.createElement('div');btn.className='song-play-btn';btn.textContent='▶';
     card.appendChild(iconBox);card.appendChild(info);card.appendChild(btn);
-    const go=()=>{if(curIdx===idx&&!audio.paused){audio.pause();}else{playIdx(idx);}};
-    card.addEventListener("click",go);
-    card.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go();}});
+    const go=()=>{
+      if(curIdx===idx&&!audio.paused)audio.pause();
+      else playIdx(idx);
+    };
+    card.addEventListener('click',go);
+    card.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}});
     ui.songList.appendChild(card);cards.push(card);
-    // lazy icon
+    // lazy icon load
     (async()=>{
       const url=await findIcon(name);
       iconUrls[idx]=url;
       if(url)iconBox.innerHTML=`<img src="${url}" alt="${esc(name)}">`;
+      // if this is the currently flying icon, update it
+      if(idx===curIdx)setFlyContent(idx);
     })();
   });
 }
 
-// ── Data loading ──
+// ── Data fetch ──
 async function fetchJson(url,onP,prefix){
-  const res=await fetch(url,{cache:"no-store"});
+  const res=await fetch(url,{cache:'no-store'});
   if(!res.ok)throw new Error(`HTTP ${res.status}`);
-  const total=Number(res.headers.get("Content-Length"))||null;
-  if(!res.body||!total){onP(0.65,`${prefix} Reading…`);const d=await res.json();onP(1,"Done");return d;}
+  const total=Number(res.headers.get('Content-Length'))||null;
+  if(!res.body||!total){onP(0.65,`${prefix} Reading…`);const d=await res.json();onP(1,'Done');return d;}
   const reader=res.body.getReader();let recv=0;const chunks=[];
-  onP(0.05,`${prefix} Downloading…`);
+  onP(0.05,`Downloading…`);
   while(true){const{done,value}=await reader.read();if(done)break;chunks.push(value);recv+=value.length;onP(0.05+(recv/total)*0.8,`${prefix} ${Math.round(recv/total*100)}%`);}
-  onP(0.92,`${prefix} Parsing…`);
+  onP(0.92,'Parsing…');
   const merged=new Uint8Array(recv);let off=0;for(const c of chunks){merged.set(c,off);off+=c.length;}
-  const d=JSON.parse(new TextDecoder().decode(merged));onP(1,"Done");return d;
+  const d=JSON.parse(new TextDecoder().decode(merged));onP(1,'Done');return d;
 }
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 
 async function loadSongs(){
   try{
-    setS(0.02,"Starting…");
-    let list=[],src="unknown";
+    setSP(0.02,'Starting…');
     try{
-      setS(0.10,"Checking Songs/index.json…");
-      const data=await fetchJson("./Songs/index.json",(p,s)=>setS(p*0.85,s),"Songs");
-      list=Array.isArray(data)?data:(data?.songs||[]);
+      setSP(0.10,'Checking Songs/index.json…');
+      const data=await fetchJson('./Songs/index.json',(p,s)=>setSP(p*0.85,s),'Songs');
+      let list=Array.isArray(data)?data:(data?.songs||[]);
       list=[...new Set(list.map(String).map(s=>s.trim()).filter(Boolean))];
-      src="Songs/index.json";
+      setSP(0.92,'Building list…');renderSongs(list,'Songs/index.json');setSP(1,'Ready');
     }catch{
-      setS(1,"No Songs/index.json found");renderSongs([],"Not found");prog.dS=true;return;
+      setSP(1,'No Songs/index.json found');renderSongs([],'Not found');
     }
-    setS(0.92,"Building list…");renderSongs(list,src);setS(1,"Ready");prog.dS=true;
-  }catch(e){console.error(e);setS(1,"Error");renderSongs([],"Failed");prog.dS=true;}
+    pg.dS=true;
+  }catch(e){console.error(e);setSP(1,'Error');renderSongs([],'Failed');pg.dS=true;}
 }
-
 async function loadTool(){
-  try{
-    setT(0.05,"Booting…");await sleep(140);setT(0.22,"Preparing UI…");await sleep(180);
-    setT(0.5,"Attaching listeners…");await sleep(160);setT(0.78,"Final touches…");await sleep(140);
-    setT(1,"Ready");prog.dT=true;
-  }catch(e){console.error(e);setT(1,"Ready");prog.dT=true;}
+  try{setTP(0.05,'Booting…');await sleep(140);setTP(0.22,'Preparing UI…');await sleep(180);setTP(0.5,'Attaching…');await sleep(160);setTP(0.78,'Final touches…');await sleep(140);setTP(1,'Ready');}
+  catch(e){console.error(e);setTP(1,'Ready');}
+  pg.dT=true;
 }
 
 (async()=>{requestAnimationFrame(tick);await Promise.all([loadSongs(),loadTool()]);})();
