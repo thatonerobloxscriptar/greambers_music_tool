@@ -209,6 +209,22 @@
 
     /* wipe canvas on song cards */
     .wipe-canvas{position:absolute;inset:0;border-radius:14px;pointer-events:none;z-index:2;}
+
+    /* ── VISUALIZER BARS ── */
+    #vizWrap{
+      position:fixed;pointer-events:none;z-index:499;
+      display:none;
+    }
+    #vizWrap.active{display:block;}
+    .viz-bar{
+      position:absolute;
+      background:rgba(255,255,255,0.85);
+      border-radius:2px;
+      will-change:width,opacity;
+      box-shadow:0 0 6px rgba(255,255,255,0.3);
+    }
+    /* make flyIcon clickable in fullscreen */
+    #flyIcon.fs-clickable{pointer-events:all;cursor:pointer;}
   </style>
 </head>
 <body>
@@ -257,6 +273,8 @@
 
 <!-- Flying icon (shared, travels between card and FS) -->
 <div id="flyIcon"><div class="icon-ph">♪</div></div>
+<!-- Visualizer bars around icon -->
+<div id="vizWrap"></div>
 
 <!-- Mini bar -->
 <div id="miniBar">
@@ -323,6 +341,7 @@ const ui={
   searchWrap:$id('searchWrap'),searchInput:$id('searchInput'),
   searchSpinner:$id('searchSpinner'),searchClear:$id('searchClear'),
   searchEmpty:$id('searchEmpty'),
+  vizWrap:$id('vizWrap'),
 };
 
 // ── Loader ──
@@ -349,6 +368,234 @@ const audio=new Audio();
 let songs=[],curIdx=-1,cards=[],iconUrls=[];
 let isFull=false;
 audio.volume=1;
+
+// ── Web Audio API for visualizer ──
+let audioCtx=null,analyser=null,sourceNode=null,freqData=null;
+function ensureAudioCtx(){
+  if(audioCtx)return;
+  audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  analyser=audioCtx.createAnalyser();
+  analyser.fftSize=128; // 64 frequency bins
+  analyser.smoothingTimeConstant=0.78;
+  freqData=new Uint8Array(analyser.frequencyBinCount);
+  sourceNode=audioCtx.createMediaElementSource(audio);
+  sourceNode.connect(analyser);
+  analyser.connect(audioCtx.destination);
+}
+
+// ── Slowdown / Visualizer state ──
+let isSlowingDown=false;   // currently in slowdown/speedup cycle
+let vizAnimId=null;
+const VIZ_BAR_COUNT=14;    // bars per side
+let vizBars=[];             // DOM elements
+
+function createVizBars(){
+  ui.vizWrap.innerHTML='';
+  vizBars=[];
+  for(let i=0;i<VIZ_BAR_COUNT*2;i++){
+    const bar=document.createElement('div');
+    bar.className='viz-bar';
+    ui.vizWrap.appendChild(bar);
+    vizBars.push(bar);
+  }
+}
+createVizBars();
+
+function positionVizBars(){
+  // place bars on left and right sides of the flyIcon in FS position
+  const cx=FS_TARGET.x+FS_TARGET.size/2;
+  const cy=FS_TARGET.y+FS_TARGET.size/2;
+  const iconR=FS_TARGET.size/2;
+  const gap=10; // gap between icon edge and first bar
+  const barH=3; // height of each bar
+  const barSpacing=Math.min(14, (FS_TARGET.size*0.85)/VIZ_BAR_COUNT);
+  const startY=cy - ((VIZ_BAR_COUNT-1)*barSpacing)/2;
+
+  for(let i=0;i<VIZ_BAR_COUNT;i++){
+    const y=startY + i*barSpacing;
+    // left bar
+    const lBar=vizBars[i];
+    lBar.style.top=y+'px';
+    lBar.style.height=barH+'px';
+    lBar.style.width='0px';
+    lBar.style.right='';
+    lBar.dataset.side='left';
+    lBar.dataset.idx=i;
+    // right bar
+    const rBar=vizBars[VIZ_BAR_COUNT+i];
+    rBar.style.top=y+'px';
+    rBar.style.height=barH+'px';
+    rBar.style.width='0px';
+    rBar.dataset.side='right';
+    rBar.dataset.idx=i;
+  }
+}
+
+function updateVizBars(intensity){
+  // intensity: 0 = bars hidden, 1 = full bars driven by audio data
+  if(!analyser||!freqData)return;
+  analyser.getByteFrequencyData(freqData);
+
+  const cx=FS_TARGET.x+FS_TARGET.size/2;
+  const iconR=FS_TARGET.size/2;
+  const gap=10;
+  const maxBarW=80;
+
+  for(let i=0;i<VIZ_BAR_COUNT;i++){
+    // pick frequency bin — spread across the spectrum
+    const binIdx=Math.min(Math.floor((i/VIZ_BAR_COUNT)*freqData.length*0.7)+2, freqData.length-1);
+    const rawVal=freqData[binIdx]/255; // 0..1
+    const val=rawVal*intensity;
+    const w=Math.max(0, val*maxBarW);
+    const alpha=0.3 + val*0.7;
+
+    // left bar: extends leftward from icon
+    const lBar=vizBars[i];
+    const leftEdge=FS_TARGET.x - gap - w;
+    lBar.style.left=leftEdge+'px';
+    lBar.style.width=w+'px';
+    lBar.style.opacity=alpha;
+
+    // right bar: extends rightward from icon
+    const rBar=vizBars[VIZ_BAR_COUNT+i];
+    rBar.style.left=(FS_TARGET.x+FS_TARGET.size+gap)+'px';
+    rBar.style.width=w+'px';
+    rBar.style.opacity=alpha;
+  }
+}
+
+// Custom spin speed — override CSS animation with manual rotation
+let manualSpin=false;
+let spinAngle=0;
+let spinSpeed=36; // degrees per second at normal speed (360/10s)
+let lastSpinTime=0;
+
+function startManualSpin(){
+  if(manualSpin)return;
+  manualSpin=true;
+  ui.flyIcon.classList.remove('spinning');
+  // capture current CSS rotation
+  const cs=getComputedStyle(ui.flyIcon);
+  const tr=cs.transform;
+  if(tr&&tr!=='none'){
+    const m=tr.match(/matrix\((.+)\)/);
+    if(m){
+      const v=m[1].split(',').map(Number);
+      spinAngle=Math.atan2(v[1],v[0])*(180/Math.PI);
+    }
+  }
+  lastSpinTime=performance.now();
+}
+
+function stopManualSpin(){
+  manualSpin=false;
+  // restore CSS spinning
+  // set current angle as starting point
+  ui.flyIcon.style.transform=`rotate(${spinAngle%360}deg)`;
+  ui.flyIcon.getBoundingClientRect(); // reflow
+  ui.flyIcon.classList.add('spinning');
+}
+
+function tickManualSpin(now){
+  if(!manualSpin)return;
+  const dt=(now-lastSpinTime)/1000;
+  lastSpinTime=now;
+  const rate=audio.playbackRate;
+  spinAngle+=spinSpeed*rate*dt;
+  ui.flyIcon.style.transform=`rotate(${spinAngle%360}deg)`;
+}
+
+// ── The slowdown/resume click handler ──
+async function handleFSIconClick(){
+  if(!isFull||curIdx<0||isSlowingDown)return;
+  ensureAudioCtx();
+  if(audioCtx.state==='suspended')audioCtx.resume();
+
+  isSlowingDown=true;
+  ui.flyIcon.classList.add('fs-clickable');
+  ui.vizWrap.classList.add('active');
+  positionVizBars();
+
+  // Switch to manual spin so speed follows playbackRate
+  startManualSpin();
+
+  const wasPlaying=!audio.paused;
+  if(!wasPlaying){
+    // if paused, do the reverse: speed up from 0
+    audio.playbackRate=0.01;
+    audio.play().catch(()=>{});
+    await rampRate(0.01,1.0,600);
+    isSlowingDown=false;
+    stopManualSpin();
+    fadeOutViz(400);
+    return;
+  }
+
+  // Phase 1: Slow down quickly (400ms)
+  await rampRate(1.0,0.0,400);
+  audio.pause();
+
+  // Phase 2: Brief pause (200ms) — bars emerge as tiny stubs
+  await sleep(200);
+
+  // Phase 3: Speed back up (700ms) with bars growing
+  audio.playbackRate=0.01;
+  audio.play().catch(()=>{});
+  await rampRate(0.01,1.0,700);
+
+  // Done — return to normal
+  audio.playbackRate=1.0;
+  isSlowingDown=false;
+  stopManualSpin();
+  fadeOutViz(500);
+}
+
+function rampRate(from,to,duration){
+  return new Promise(res=>{
+    const start=performance.now();
+    const vizIntensityBase=to>from?1:0; // growing or shrinking
+    function frame(now){
+      const t=Math.min((now-start)/duration,1);
+      // ease in-out
+      const ease=t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+      const rate=from+(to-from)*ease;
+      const clampedRate=Math.max(0.01,Math.min(rate,4.0));
+      audio.playbackRate=clampedRate;
+
+      // visualizer intensity follows rate when speeding up, inverse when slowing
+      let vizI;
+      if(to>from){
+        // speeding up: bars grow with speed
+        vizI=ease;
+      } else {
+        // slowing down: bars shrink with speed
+        vizI=1-ease;
+      }
+      updateVizBars(vizI);
+      tickManualSpin(now);
+
+      if(t<1)requestAnimationFrame(frame);
+      else{audio.playbackRate=Math.max(0.01,to);res();}
+    }
+    requestAnimationFrame(frame);
+  });
+}
+
+function fadeOutViz(duration){
+  const start=performance.now();
+  function frame(now){
+    const t=Math.min((now-start)/duration,1);
+    updateVizBars(1-t);
+    if(t<1)requestAnimationFrame(frame);
+    else ui.vizWrap.classList.remove('active');
+  }
+  requestAnimationFrame(frame);
+}
+
+// Attach click to flyIcon
+ui.flyIcon.addEventListener('click',()=>{
+  if(isFull)handleFSIconClick();
+});
 
 function fmt(s){if(!isFinite(s)||isNaN(s))return'0:00';const m=Math.floor(s/60),sec=Math.floor(s%60);return`${m}:${sec.toString().padStart(2,'0')}`;}
 function esc(s){return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');}
@@ -392,7 +639,7 @@ ui.mPrev.addEventListener('click',()=>playIdx(curIdx-1));ui.fsPrev.addEventListe
 ui.mNext.addEventListener('click',()=>playIdx(curIdx+1));ui.fsNext.addEventListener('click',()=>playIdx(curIdx+1));
 ui.mFS.addEventListener('click',openFS);
 ui.fsMin.addEventListener('click',closeFS);
-function togglePlay(){if(curIdx<0)return;audio.paused?audio.play():audio.pause();}
+function togglePlay(){if(curIdx<0)return;ensureAudioCtx();if(audioCtx.state==='suspended')audioCtx.resume();audio.paused?audio.play():audio.pause();}
 
 // ── FLIP icon animation ──
 // The flyIcon element travels between the card iconbox position and the FS landing zone (top-left ~56,48).
@@ -469,11 +716,15 @@ async function openFS(){
     toRect,14,FS_TARGET.br,480,null,null,true
   );
   // after landing, leave flyIcon sitting there spinning
+  ui.flyIcon.classList.add('fs-clickable');
 }
 
 async function closeFS(){
   if(!isFull)return;
   isFull=false;
+  ui.flyIcon.classList.remove('fs-clickable');
+  ui.vizWrap.classList.remove('active');
+  if(manualSpin)stopManualSpin();
   ui.fsOverlay.classList.remove('active');
   const fly=ui.flyIcon;
   const cardRect=getCardIconRect(curIdx);
@@ -547,6 +798,13 @@ async function playIdx(idx){
   const name=songs[idx];
   const prevIdx=curIdx;
 
+  // Cancel any ongoing slowdown/viz
+  isSlowingDown=false;
+  audio.playbackRate=1.0;
+  ui.vizWrap.classList.remove('active');
+  ui.flyIcon.classList.remove('fs-clickable');
+  if(manualSpin)stopManualSpin();
+
   // If switching while fullscreen: animate old icon back, wipe it, then fly new one up
   if(isFull&&prevIdx>=0&&prevIdx!==idx){
     // shrink old icon back to card
@@ -587,7 +845,9 @@ async function playIdx(idx){
       setFlyContent(idx);
       hideCardImg(idx,true);
       const toRect={x:FS_TARGET.x,y:FS_TARGET.y,width:FS_TARGET.size,height:FS_TARGET.size};
-      animateFly({x:newCardRect.left,y:newCardRect.top,width:newCardRect.width,height:newCardRect.height},toRect,14,FS_TARGET.br,460,null,null,true);
+      animateFly({x:newCardRect.left,y:newCardRect.top,width:newCardRect.width,height:newCardRect.height},toRect,14,FS_TARGET.br,460,null,()=>{
+        ui.flyIcon.classList.add('fs-clickable');
+      },true);
     }
   }
 
