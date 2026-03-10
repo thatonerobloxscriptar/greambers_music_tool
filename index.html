@@ -210,21 +210,18 @@
     /* wipe canvas on song cards */
     .wipe-canvas{position:absolute;inset:0;border-radius:14px;pointer-events:none;z-index:2;}
 
-    /* ── VISUALIZER BARS ── */
-    #vizWrap{
-      position:fixed;pointer-events:none;z-index:499;
+    /* ── VISUALIZER CANVAS (rendered ON the icon) ── */
+    #vizCanvas{
+      position:absolute;inset:0;
+      width:100%;height:100%;
+      pointer-events:none;
+      z-index:2;
+      border-radius:inherit;
       display:none;
     }
-    #vizWrap.active{display:block;}
-    .viz-bar{
-      position:absolute;
-      background:rgba(255,255,255,0.85);
-      border-radius:2px;
-      will-change:width,opacity;
-      box-shadow:0 0 6px rgba(255,255,255,0.3);
-    }
+    #vizCanvas.active{display:block;}
     /* make flyIcon clickable in fullscreen */
-    #flyIcon.fs-clickable{pointer-events:all;cursor:pointer;}
+    #flyIcon.fs-clickable{pointer-events:all;cursor:pointer;position:fixed;}
   </style>
 </head>
 <body>
@@ -272,9 +269,7 @@
 </div>
 
 <!-- Flying icon (shared, travels between card and FS) -->
-<div id="flyIcon"><div class="icon-ph">♪</div></div>
-<!-- Visualizer bars around icon -->
-<div id="vizWrap"></div>
+<div id="flyIcon"><div class="icon-ph">♪</div><canvas id="vizCanvas"></canvas></div>
 
 <!-- Mini bar -->
 <div id="miniBar">
@@ -341,7 +336,7 @@ const ui={
   searchWrap:$id('searchWrap'),searchInput:$id('searchInput'),
   searchSpinner:$id('searchSpinner'),searchClear:$id('searchClear'),
   searchEmpty:$id('searchEmpty'),
-  vizWrap:$id('vizWrap'),
+  vizCanvas:$id('vizCanvas'),
 };
 
 // ── Loader ──
@@ -375,221 +370,157 @@ function ensureAudioCtx(){
   if(audioCtx)return;
   audioCtx=new(window.AudioContext||window.webkitAudioContext)();
   analyser=audioCtx.createAnalyser();
-  analyser.fftSize=128; // 64 frequency bins
-  analyser.smoothingTimeConstant=0.78;
+  analyser.fftSize=128;
+  analyser.smoothingTimeConstant=0.82;
   freqData=new Uint8Array(analyser.frequencyBinCount);
   sourceNode=audioCtx.createMediaElementSource(audio);
   sourceNode.connect(analyser);
   analyser.connect(audioCtx.destination);
 }
 
-// ── Slowdown / Visualizer state ──
-let isSlowingDown=false;   // currently in slowdown/speedup cycle
-let vizAnimId=null;
-const VIZ_BAR_COUNT=14;    // bars per side
-let vizBars=[];             // DOM elements
+// ── Slowdown + Visualizer state ──
+let isSlowingDown=false;
+let vizRunning=false;
 
-function createVizBars(){
-  ui.vizWrap.innerHTML='';
-  vizBars=[];
-  for(let i=0;i<VIZ_BAR_COUNT*2;i++){
-    const bar=document.createElement('div');
-    bar.className='viz-bar';
-    ui.vizWrap.appendChild(bar);
-    vizBars.push(bar);
-  }
-}
-createVizBars();
-
-function positionVizBars(){
-  // place bars on left and right sides of the flyIcon in FS position
-  const cx=FS_TARGET.x+FS_TARGET.size/2;
-  const cy=FS_TARGET.y+FS_TARGET.size/2;
-  const iconR=FS_TARGET.size/2;
-  const gap=10; // gap between icon edge and first bar
-  const barH=3; // height of each bar
-  const barSpacing=Math.min(14, (FS_TARGET.size*0.85)/VIZ_BAR_COUNT);
-  const startY=cy - ((VIZ_BAR_COUNT-1)*barSpacing)/2;
-
-  for(let i=0;i<VIZ_BAR_COUNT;i++){
-    const y=startY + i*barSpacing;
-    // left bar
-    const lBar=vizBars[i];
-    lBar.style.top=y+'px';
-    lBar.style.height=barH+'px';
-    lBar.style.width='0px';
-    lBar.style.right='';
-    lBar.dataset.side='left';
-    lBar.dataset.idx=i;
-    // right bar
-    const rBar=vizBars[VIZ_BAR_COUNT+i];
-    rBar.style.top=y+'px';
-    rBar.style.height=barH+'px';
-    rBar.style.width='0px';
-    rBar.dataset.side='right';
-    rBar.dataset.idx=i;
-  }
-}
-
-function updateVizBars(intensity){
-  // intensity: 0 = bars hidden, 1 = full bars driven by audio data
-  if(!analyser||!freqData)return;
-  analyser.getByteFrequencyData(freqData);
-
-  const cx=FS_TARGET.x+FS_TARGET.size/2;
-  const iconR=FS_TARGET.size/2;
-  const gap=10;
-  const maxBarW=80;
-
-  for(let i=0;i<VIZ_BAR_COUNT;i++){
-    // pick frequency bin — spread across the spectrum
-    const binIdx=Math.min(Math.floor((i/VIZ_BAR_COUNT)*freqData.length*0.7)+2, freqData.length-1);
-    const rawVal=freqData[binIdx]/255; // 0..1
-    const val=rawVal*intensity;
-    const w=Math.max(0, val*maxBarW);
-    const alpha=0.3 + val*0.7;
-
-    // left bar: extends leftward from icon
-    const lBar=vizBars[i];
-    const leftEdge=FS_TARGET.x - gap - w;
-    lBar.style.left=leftEdge+'px';
-    lBar.style.width=w+'px';
-    lBar.style.opacity=alpha;
-
-    // right bar: extends rightward from icon
-    const rBar=vizBars[VIZ_BAR_COUNT+i];
-    rBar.style.left=(FS_TARGET.x+FS_TARGET.size+gap)+'px';
-    rBar.style.width=w+'px';
-    rBar.style.opacity=alpha;
-  }
-}
-
-// Custom spin speed — override CSS animation with manual rotation
-let manualSpin=false;
-let spinAngle=0;
-let spinSpeed=36; // degrees per second at normal speed (360/10s)
-let lastSpinTime=0;
+// Manual spin — so icon spin speed follows playbackRate
+let manualSpin=false, spinAngle=0, spinSpeed=36, lastSpinTime=0;
 
 function startManualSpin(){
   if(manualSpin)return;
   manualSpin=true;
   ui.flyIcon.classList.remove('spinning');
-  // capture current CSS rotation
   const cs=getComputedStyle(ui.flyIcon);
   const tr=cs.transform;
   if(tr&&tr!=='none'){
     const m=tr.match(/matrix\((.+)\)/);
-    if(m){
-      const v=m[1].split(',').map(Number);
-      spinAngle=Math.atan2(v[1],v[0])*(180/Math.PI);
-    }
+    if(m){const v=m[1].split(',').map(Number);spinAngle=Math.atan2(v[1],v[0])*(180/Math.PI);}
   }
   lastSpinTime=performance.now();
 }
-
 function stopManualSpin(){
   manualSpin=false;
-  // restore CSS spinning
-  // set current angle as starting point
   ui.flyIcon.style.transform=`rotate(${spinAngle%360}deg)`;
-  ui.flyIcon.getBoundingClientRect(); // reflow
+  ui.flyIcon.getBoundingClientRect();
   ui.flyIcon.classList.add('spinning');
 }
-
 function tickManualSpin(now){
   if(!manualSpin)return;
   const dt=(now-lastSpinTime)/1000;
   lastSpinTime=now;
-  const rate=audio.playbackRate;
-  spinAngle+=spinSpeed*rate*dt;
+  spinAngle+=spinSpeed*audio.playbackRate*dt;
   ui.flyIcon.style.transform=`rotate(${spinAngle%360}deg)`;
 }
 
-// ── The slowdown/resume click handler ──
-async function handleFSIconClick(){
-  if(!isFull||curIdx<0||isSlowingDown)return;
-  ensureAudioCtx();
-  if(audioCtx.state==='suspended')audioCtx.resume();
+// ── Draw visualizer bars ON the icon canvas ──
+function drawVizOnIcon(intensity){
+  const cv=ui.vizCanvas;
+  const size=ui.flyIcon.offsetWidth||190;
+  if(cv.width!==size||cv.height!==size){cv.width=size;cv.height=size;}
+  const ctx=cv.getContext('2d');
+  ctx.clearRect(0,0,size,size);
+  if(!analyser||!freqData||intensity<=0)return;
+  analyser.getByteFrequencyData(freqData);
 
-  isSlowingDown=true;
-  ui.flyIcon.classList.add('fs-clickable');
-  ui.vizWrap.classList.add('active');
-  positionVizBars();
+  const barCount=12;
+  const barH=3;
+  const barSpacing=Math.floor((size*0.7)/barCount);
+  const startY=Math.floor(size*0.15);
+  const maxBarW=size*0.35;
+  const edgeGap=4;
 
-  // Switch to manual spin so speed follows playbackRate
-  startManualSpin();
+  for(let i=0;i<barCount;i++){
+    const binIdx=Math.min(Math.floor((i/barCount)*freqData.length*0.65)+2, freqData.length-1);
+    const rawVal=freqData[binIdx]/255;
+    const val=rawVal*intensity;
+    const w=Math.max(0,val*maxBarW);
+    const y=startY+i*barSpacing;
+    const alpha=0.4+val*0.6;
 
-  const wasPlaying=!audio.paused;
-  if(!wasPlaying){
-    // if paused, do the reverse: speed up from 0
-    audio.playbackRate=0.01;
-    audio.play().catch(()=>{});
-    await rampRate(0.01,1.0,600);
-    isSlowingDown=false;
-    stopManualSpin();
-    fadeOutViz(400);
-    return;
+    ctx.fillStyle=`rgba(255,255,255,${alpha})`;
+    ctx.shadowColor='rgba(255,255,255,0.5)';
+    ctx.shadowBlur=4*val;
+
+    // left bars — grow inward from left edge
+    ctx.fillRect(edgeGap,y,w,barH);
+
+    // right bars — grow inward from right edge
+    ctx.fillRect(size-edgeGap-w,y,w,barH);
   }
-
-  // Phase 1: Slow down quickly (400ms)
-  await rampRate(1.0,0.0,400);
-  audio.pause();
-
-  // Phase 2: Brief pause (200ms) — bars emerge as tiny stubs
-  await sleep(200);
-
-  // Phase 3: Speed back up (700ms) with bars growing
-  audio.playbackRate=0.01;
-  audio.play().catch(()=>{});
-  await rampRate(0.01,1.0,700);
-
-  // Done — return to normal
-  audio.playbackRate=1.0;
-  isSlowingDown=false;
-  stopManualSpin();
-  fadeOutViz(500);
+  ctx.shadowBlur=0;
 }
 
+// ── Continuous viz animation loop ──
+function startVizLoop(){
+  if(vizRunning)return;
+  vizRunning=true;
+  ui.vizCanvas.classList.add('active');
+  function loop(now){
+    if(!vizRunning){ui.vizCanvas.classList.remove('active');return;}
+    tickManualSpin(now);
+    // intensity based on how far from 1.0 the rate is — visualizer shows when slowed
+    const rate=audio.playbackRate;
+    const intensity=Math.max(0,1-((rate-0.25)/0.75));
+    drawVizOnIcon(intensity);
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+}
+function stopVizLoop(){
+  vizRunning=false;
+  // fade out the canvas
+  const cv=ui.vizCanvas;
+  const start=performance.now();
+  function fade(now){
+    const t=Math.min((now-start)/400,1);
+    cv.style.opacity=1-t;
+    if(t<1)requestAnimationFrame(fade);
+    else{cv.classList.remove('active');cv.style.opacity='';}
+  }
+  requestAnimationFrame(fade);
+}
+
+// ── Smooth rate ramp (0.25 minimum!) ──
 function rampRate(from,to,duration){
   return new Promise(res=>{
     const start=performance.now();
-    const vizIntensityBase=to>from?1:0; // growing or shrinking
     function frame(now){
       const t=Math.min((now-start)/duration,1);
-      // ease in-out
       const ease=t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
       const rate=from+(to-from)*ease;
-      const clampedRate=Math.max(0.01,Math.min(rate,4.0));
-      audio.playbackRate=clampedRate;
-
-      // visualizer intensity follows rate when speeding up, inverse when slowing
-      let vizI;
-      if(to>from){
-        // speeding up: bars grow with speed
-        vizI=ease;
-      } else {
-        // slowing down: bars shrink with speed
-        vizI=1-ease;
-      }
-      updateVizBars(vizI);
-      tickManualSpin(now);
-
+      audio.playbackRate=Math.max(0.25,Math.min(rate,4.0));
       if(t<1)requestAnimationFrame(frame);
-      else{audio.playbackRate=Math.max(0.01,to);res();}
+      else{audio.playbackRate=Math.max(0.25,to);res();}
     }
     requestAnimationFrame(frame);
   });
 }
 
-function fadeOutViz(duration){
-  const start=performance.now();
-  function frame(now){
-    const t=Math.min((now-start)/duration,1);
-    updateVizBars(1-t);
-    if(t<1)requestAnimationFrame(frame);
-    else ui.vizWrap.classList.remove('active');
-  }
-  requestAnimationFrame(frame);
+// ── The click handler: slow → hold 3s → speed back up ──
+async function handleFSIconClick(){
+  if(!isFull||curIdx<0||isSlowingDown||audio.paused)return;
+  ensureAudioCtx();
+  if(audioCtx.state==='suspended')audioCtx.resume();
+
+  isSlowingDown=true;
+
+  // Switch to manual spin
+  startManualSpin();
+  startVizLoop();
+
+  // Phase 1: Smooth slowdown to 0.25x (500ms)
+  await rampRate(1.0, 0.25, 500);
+
+  // Phase 2: Hold at 0.25x for 3 seconds (bars react to slowed audio)
+  await sleep(3000);
+
+  // Phase 3: Smooth speedup back to 1x (600ms)
+  await rampRate(0.25, 1.0, 600);
+
+  // Done
+  audio.playbackRate=1.0;
+  isSlowingDown=false;
+  stopVizLoop();
+  stopManualSpin();
 }
 
 // Attach click to flyIcon
@@ -665,7 +596,19 @@ function setFlyStyle(x,y,size,br,spin){
 
 function setFlyContent(idx){
   const url=iconUrls[idx]||null;
-  ui.flyIcon.innerHTML=url?`<img src="${url}" alt="">`:`<div class="icon-ph" style="font-size:${Math.round(ui.flyIcon.offsetWidth*0.32)||28}px">♪</div>`;
+  // Remove old content but keep vizCanvas
+  const cv=ui.vizCanvas;
+  ui.flyIcon.innerHTML='';
+  if(url){
+    const img=document.createElement('img');img.src=url;img.alt='';
+    ui.flyIcon.appendChild(img);
+  } else {
+    const ph=document.createElement('div');ph.className='icon-ph';
+    ph.style.fontSize=(Math.round(ui.flyIcon.offsetWidth*0.32)||28)+'px';
+    ph.textContent='♪';
+    ui.flyIcon.appendChild(ph);
+  }
+  ui.flyIcon.appendChild(cv);
 }
 
 function animateFly(fromRect,toRect,fromBr,toBr,duration,onMid,onDone,spin){
@@ -715,15 +658,17 @@ async function openFS(){
     {x:cardRect.left,y:cardRect.top,width:cardRect.width,height:cardRect.height},
     toRect,14,FS_TARGET.br,480,null,null,true
   );
-  // after landing, leave flyIcon sitting there spinning
+  // after landing, leave flyIcon sitting there spinning — make clickable
   ui.flyIcon.classList.add('fs-clickable');
 }
 
 async function closeFS(){
   if(!isFull)return;
   isFull=false;
+  isSlowingDown=false;
+  audio.playbackRate=1.0;
   ui.flyIcon.classList.remove('fs-clickable');
-  ui.vizWrap.classList.remove('active');
+  vizRunning=false;ui.vizCanvas.classList.remove('active');ui.vizCanvas.style.opacity='';
   if(manualSpin)stopManualSpin();
   ui.fsOverlay.classList.remove('active');
   const fly=ui.flyIcon;
@@ -801,7 +746,7 @@ async function playIdx(idx){
   // Cancel any ongoing slowdown/viz
   isSlowingDown=false;
   audio.playbackRate=1.0;
-  ui.vizWrap.classList.remove('active');
+  vizRunning=false;ui.vizCanvas.classList.remove('active');ui.vizCanvas.style.opacity='';
   ui.flyIcon.classList.remove('fs-clickable');
   if(manualSpin)stopManualSpin();
 
