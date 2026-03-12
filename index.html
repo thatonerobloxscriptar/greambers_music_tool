@@ -209,9 +209,86 @@
 
     /* wipe canvas on song cards */
     .wipe-canvas{position:absolute;inset:0;border-radius:14px;pointer-events:none;z-index:2;}
+
+    /* ── AGE GATE ── */
+    #ageGate{
+      position:fixed;inset:0;z-index:10000;
+      display:grid;place-items:center;
+      background:
+        radial-gradient(1200px 700px at 70% 20%,rgba(120,160,255,0.13),transparent 55%),
+        radial-gradient(900px 600px at 20% 70%,rgba(255,120,220,0.09),transparent 55%),
+        var(--bg);
+      transition:opacity 400ms ease,transform 400ms ease;
+    }
+    #ageGate.dismissed{opacity:0;transform:scale(1.02);pointer-events:none;}
+    .age-box{
+      width:min(420px,88vw);
+      padding:36px 30px 28px;
+      border-radius:22px;
+      background:linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.035));
+      border:1px solid var(--stroke);
+      box-shadow:0 24px 80px rgba(0,0,0,0.6);
+      backdrop-filter:blur(14px);
+      display:flex;flex-direction:column;align-items:center;gap:20px;
+      text-align:center;
+    }
+    .age-title{
+      font-size:17px;font-weight:700;line-height:1.45;
+      color:var(--text);
+    }
+    .age-check{
+      display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;
+    }
+    .age-checkbox{
+      width:22px;height:22px;border-radius:6px;flex-shrink:0;
+      border:2px solid rgba(255,255,255,0.22);
+      background:rgba(0,0,0,0.25);
+      display:grid;place-items:center;
+      transition:border-color 160ms ease,background 160ms ease;
+    }
+    .age-check.checked .age-checkbox{
+      border-color:var(--accent);background:var(--accent);
+    }
+    .age-checkbox .tick{
+      font-size:14px;color:#fff;opacity:0;transition:opacity 120ms ease;
+    }
+    .age-check.checked .age-checkbox .tick{opacity:1;}
+    .age-label{
+      font-size:13.5px;color:rgba(255,255,255,0.45);
+    }
+    .age-proceed{
+      width:100%;padding:12px 0;border-radius:12px;border:none;
+      font-family:inherit;font-size:14.5px;font-weight:700;
+      color:rgba(255,255,255,0.3);
+      background:rgba(255,255,255,0.06);
+      cursor:default;
+      transition:background 220ms ease,color 220ms ease,box-shadow 220ms ease,transform 80ms ease;
+    }
+    .age-proceed.active{
+      color:#fff;background:var(--accent);cursor:pointer;
+      box-shadow:0 4px 20px rgba(127,170,255,0.3);
+    }
+    .age-proceed.active:hover{filter:brightness(1.1);}
+    .age-proceed.active:active{transform:scale(0.97);}
+    .age-note{
+      font-size:11.5px;color:rgba(255,255,255,0.3);
+    }
   </style>
 </head>
 <body>
+
+<!-- Age Gate -->
+<div id="ageGate">
+  <div class="age-box">
+    <div class="age-title">⚠️ Warning!<br>This tool will contain 18+ music.<br>Confirm below to enter.</div>
+    <div class="age-check" id="ageCheck">
+      <div class="age-checkbox"><span class="tick">✓</span></div>
+      <span class="age-label">I confirm I am 18 or older.</span>
+    </div>
+    <button class="age-proceed" id="ageProceed" disabled>Proceed</button>
+    <div class="age-note">(This warning will not show again)</div>
+  </div>
+</div>
 
 <!-- Loader -->
 <div id="loader" aria-live="polite" aria-busy="true">
@@ -737,7 +814,42 @@ async function loadTool(){
   pg.dT=true;
 }
 
-(async()=>{requestAnimationFrame(tick);await Promise.all([loadSongs(),loadTool()]);})();
+(async()=>{
+  const gate=$id('ageGate');
+  const confirmed=localStorage.getItem('greambers_age_confirmed')==='true';
+
+  if(confirmed){
+    // Already confirmed — skip gate, boot immediately
+    gate.style.display='none';
+    requestAnimationFrame(tick);
+    await Promise.all([loadSongs(),loadTool()]);
+  } else {
+    // Show gate, hide loader until confirmed
+    $id('loader').style.display='none';
+    const check=$id('ageCheck');
+    const btn=$id('ageProceed');
+    let checked=false;
+
+    check.addEventListener('click',()=>{
+      checked=!checked;
+      check.classList.toggle('checked',checked);
+      btn.classList.toggle('active',checked);
+      btn.disabled=!checked;
+    });
+
+    btn.addEventListener('click',()=>{
+      if(!checked)return;
+      localStorage.setItem('greambers_age_confirmed','true');
+      gate.classList.add('dismissed');
+      $id('loader').style.display='grid';
+      setTimeout(async()=>{
+        gate.style.display='none';
+        requestAnimationFrame(tick);
+        await Promise.all([loadSongs(),loadTool()]);
+      },420);
+    });
+  }
+})();
 </script>
 </body>
 </html>
