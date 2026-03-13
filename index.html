@@ -232,13 +232,8 @@
       display:flex;flex-direction:column;align-items:center;gap:20px;
       text-align:center;
     }
-    .age-title{
-      font-size:17px;font-weight:700;line-height:1.45;
-      color:var(--text);
-    }
-    .age-check{
-      display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;
-    }
+    .age-title{font-size:17px;font-weight:700;line-height:1.45;color:var(--text);}
+    .age-check{display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;}
     .age-checkbox{
       width:22px;height:22px;border-radius:6px;flex-shrink:0;
       border:2px solid rgba(255,255,255,0.22);
@@ -246,32 +241,77 @@
       display:grid;place-items:center;
       transition:border-color 160ms ease,background 160ms ease;
     }
-    .age-check.checked .age-checkbox{
-      border-color:var(--accent);background:var(--accent);
-    }
-    .age-checkbox .tick{
-      font-size:14px;color:#fff;opacity:0;transition:opacity 120ms ease;
-    }
+    .age-check.checked .age-checkbox{border-color:var(--accent);background:var(--accent);}
+    .age-checkbox .tick{font-size:14px;color:#fff;opacity:0;transition:opacity 120ms ease;}
     .age-check.checked .age-checkbox .tick{opacity:1;}
-    .age-label{
-      font-size:13.5px;color:rgba(255,255,255,0.45);
-    }
+    .age-label{font-size:13.5px;color:rgba(255,255,255,0.45);}
     .age-proceed{
       width:100%;padding:12px 0;border-radius:12px;border:none;
       font-family:inherit;font-size:14.5px;font-weight:700;
-      color:rgba(255,255,255,0.3);
-      background:rgba(255,255,255,0.06);
+      color:rgba(255,255,255,0.3);background:rgba(255,255,255,0.06);
       cursor:default;
       transition:background 220ms ease,color 220ms ease,box-shadow 220ms ease,transform 80ms ease;
     }
-    .age-proceed.active{
-      color:#fff;background:var(--accent);cursor:pointer;
-      box-shadow:0 4px 20px rgba(127,170,255,0.3);
-    }
+    .age-proceed.active{color:#fff;background:var(--accent);cursor:pointer;box-shadow:0 4px 20px rgba(127,170,255,0.3);}
     .age-proceed.active:hover{filter:brightness(1.1);}
     .age-proceed.active:active{transform:scale(0.97);}
-    .age-note{
-      font-size:11.5px;color:rgba(255,255,255,0.3);
+    .age-note{font-size:11.5px;color:rgba(255,255,255,0.3);}
+
+    /* ── SETTINGS ICON ── */
+    #settingsBtn{
+      position:fixed;top:18px;right:18px;z-index:150;
+      width:40px;height:40px;border-radius:12px;
+      background:rgba(255,255,255,0.06);border:1px solid var(--stroke);
+      display:none;place-items:center;cursor:pointer;
+      font-size:18px;color:var(--muted);
+      backdrop-filter:blur(10px);
+      transition:background 140ms ease,color 140ms ease;
+    }
+    #settingsBtn.visible{display:grid;}
+    #settingsBtn:hover{background:rgba(255,255,255,0.1);color:var(--text);}
+
+    /* ── SETTINGS PANEL ── */
+    #settingsPanel{
+      position:fixed;inset:0;z-index:10001;
+      display:none;place-items:center;
+      background:rgba(0,0,0,0.6);
+      backdrop-filter:blur(6px);
+      transition:opacity 250ms ease;
+    }
+    #settingsPanel.open{display:grid;}
+    .settings-box{
+      width:min(460px,90vw);
+      padding:28px 24px 22px;
+      border-radius:20px;
+      background:linear-gradient(180deg,rgba(30,36,52,0.98),rgba(16,20,30,0.98));
+      border:1px solid var(--stroke);
+      box-shadow:0 24px 80px rgba(0,0,0,0.6);
+      display:flex;flex-direction:column;gap:18px;
+    }
+    .settings-header{
+      display:flex;align-items:center;justify-content:space-between;
+    }
+    .settings-header h2{font-size:16px;font-weight:700;}
+    .settings-close{
+      width:32px;height:32px;border-radius:8px;
+      background:rgba(255,255,255,0.06);border:1px solid var(--stroke);
+      display:grid;place-items:center;cursor:pointer;
+      font-size:15px;color:var(--muted);transition:background 130ms ease,color 130ms ease;
+    }
+    .settings-close:hover{background:rgba(255,255,255,0.1);color:var(--text);}
+    .settings-row{
+      display:flex;flex-direction:column;gap:6px;
+    }
+    .settings-label{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;}
+    .settings-value{
+      font-size:13px;font-family:'Courier New',Courier,monospace;
+      color:var(--text);
+      background:rgba(0,0,0,0.3);
+      border:1px solid rgba(255,255,255,0.08);
+      border-radius:10px;
+      padding:10px 12px;
+      word-break:break-all;
+      user-select:all;
     }
   </style>
 </head>
@@ -287,6 +327,23 @@
     </div>
     <button class="age-proceed" id="ageProceed" disabled>Proceed</button>
     <div class="age-note">(This warning will not show again)</div>
+  </div>
+</div>
+
+<!-- Settings button -->
+<div id="settingsBtn">⚙</div>
+
+<!-- Settings panel -->
+<div id="settingsPanel">
+  <div class="settings-box">
+    <div class="settings-header">
+      <h2>Settings</h2>
+      <div class="settings-close" id="settingsClose">✕</div>
+    </div>
+    <div class="settings-row">
+      <div class="settings-label">Your Unique Key</div>
+      <div class="settings-value" id="settingsUQ">—</div>
+    </div>
   </div>
 </div>
 
@@ -400,6 +457,8 @@ const ui={
   searchWrap:$id('searchWrap'),searchInput:$id('searchInput'),
   searchSpinner:$id('searchSpinner'),searchClear:$id('searchClear'),
   searchEmpty:$id('searchEmpty'),
+  settingsBtn:$id('settingsBtn'),settingsPanel:$id('settingsPanel'),
+  settingsClose:$id('settingsClose'),settingsUQ:$id('settingsUQ'),
 };
 
 // ── Loader ──
@@ -423,7 +482,7 @@ function doneLoad(){ui.loader.setAttribute('aria-busy','false');ui.loader.classL
 
 // ── Audio ──
 const audio=new Audio();
-let songs=[],curIdx=-1,cards=[],iconUrls=[];
+let songs=[],curIdx=-1,cards=[],iconUrls=[],preloadedUrls=[];
 let isFull=false;
 audio.volume=1;
 
@@ -668,8 +727,8 @@ async function playIdx(idx){
     }
   }
 
-  // find & play audio
-  const url=await findAudio(name);
+  // play audio (use preloaded blob URL if available, otherwise find it)
+  const url=preloadedUrls[idx]||await findAudio(name);
   if(url){audio.src=url;audio.play().catch(()=>{});}
 }
 
@@ -746,7 +805,7 @@ function renderSongs(list,src){
   ui.srcMeta.textContent=`Source: ${src}`;
   ui.songPill.textContent=`${list.length} song${list.length===1?'':'s'}`;
   ui.songList.innerHTML='';ui.emptyState.style.display='none';
-  songs=list;cards=[];iconUrls=new Array(list.length).fill(null);
+  songs=list;cards=[];iconUrls=new Array(list.length).fill(null);preloadedUrls=new Array(list.length).fill(null);
   if(!list.length){
     ui.emptyState.style.display='block';
     ui.emptyState.innerHTML=`No songs found in <span class="pill">Songs/index.json</span>.<br><br>Make sure <span class="pill">Songs/index.json</span> is committed and Netlify has run the build script.`;
@@ -798,10 +857,35 @@ async function loadSongs(){
     setSP(0.02,'Starting…');
     try{
       setSP(0.10,'Checking Songs/index.json…');
-      const data=await fetchJson('./Songs/index.json',(p,s)=>setSP(p*0.85,s),'Songs');
+      const data=await fetchJson('./Songs/index.json',(p,s)=>setSP(p*0.25,s),'Songs');
       let list=Array.isArray(data)?data:(data?.songs||[]);
       list=[...new Set(list.map(String).map(s=>s.trim()).filter(Boolean))];
-      setSP(0.92,'Building list…');renderSongs(list,'Songs/index.json');initSearch();setSP(1,'Ready');
+      setSP(0.28,'Building list…');
+      renderSongs(list,'Songs/index.json');
+      initSearch();
+
+      // Preload all audio files
+      if(list.length){
+        setSP(0.30,'Preloading audio…');
+        let loaded=0;
+        const total=list.length;
+        await Promise.all(list.map(async(name,idx)=>{
+          try{
+            const url=await findAudio(name);
+            if(url){
+              const resp=await fetch(url);
+              if(resp.ok){
+                const blob=await resp.blob();
+                preloadedUrls[idx]=URL.createObjectURL(blob);
+              }
+            }
+          }catch(e){console.warn('[PRELOAD] Failed:',name,e.message);}
+          loaded++;
+          const p=0.30+(loaded/total)*0.68;
+          setSP(p,`Preloading ${loaded}/${total}…`);
+        }));
+      }
+      setSP(1,'Ready');
     }catch{
       setSP(1,'No Songs/index.json found');renderSongs([],'Not found');
     }
@@ -814,13 +898,64 @@ async function loadTool(){
   pg.dT=true;
 }
 
-(async()=>{
-  const gate=$id('ageGate');
-  const confirmed=localStorage.getItem('greambers_age_confirmed')==='true';
+// ── Backend API ──
+const API_BASE='https://hosting2.celeste.red:28867';
 
-  if(confirmed){
-    // Already confirmed — skip gate, boot immediately
+async function apiPost(endpoint,body){
+  try{
+    const r=await fetch(`${API_BASE}${endpoint}`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(body)
+    });
+    return await r.json();
+  }catch(e){console.warn('[API]',endpoint,'failed:',e.message);return null;}
+}
+
+// ── UQ Key Generation ──
+const UQ_CHARS='ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!"£$%^&*()_+-=.';
+function generateUQ(){
+  let key='';
+  const arr=new Uint32Array(32);
+  crypto.getRandomValues(arr);
+  for(let i=0;i<32;i++) key+=UQ_CHARS[arr[i]%UQ_CHARS.length];
+  return key;
+}
+
+function getOrCreateUQ(){
+  let uq=localStorage.getItem('gmt_uq');
+  if(!uq||uq.length!==32){
+    uq=generateUQ();
+    localStorage.setItem('gmt_uq',uq);
+    // Register with backend (fire and forget)
+    apiPost('/register-key',{uq});
+  }
+  return uq;
+}
+
+// ── Settings ──
+ui.settingsBtn.addEventListener('click',()=>{
+  ui.settingsUQ.textContent='UQ: '+getOrCreateUQ();
+  ui.settingsPanel.classList.add('open');
+});
+ui.settingsClose.addEventListener('click',()=>{
+  ui.settingsPanel.classList.remove('open');
+});
+ui.settingsPanel.addEventListener('click',(e)=>{
+  if(e.target===ui.settingsPanel)ui.settingsPanel.classList.remove('open');
+});
+
+// ── Boot ──
+(async()=>{
+  // Generate UQ immediately on first ever visit
+  const uq=getOrCreateUQ();
+
+  const gate=$id('ageGate');
+  const ageConfirmed=localStorage.getItem('gmt_age_confirmed')==='true';
+
+  if(ageConfirmed){
+    // Already confirmed — skip gate, boot
     gate.style.display='none';
+    ui.settingsBtn.classList.add('visible');
     requestAnimationFrame(tick);
     await Promise.all([loadSongs(),loadTool()]);
   } else {
@@ -839,9 +974,12 @@ async function loadTool(){
 
     btn.addEventListener('click',()=>{
       if(!checked)return;
-      localStorage.setItem('greambers_age_confirmed','true');
+      localStorage.setItem('gmt_age_confirmed','true');
+      // Send age confirmation to backend
+      apiPost('/update-key',{uq,updates:{ageConfirmed:true}});
       gate.classList.add('dismissed');
       $id('loader').style.display='grid';
+      ui.settingsBtn.classList.add('visible');
       setTimeout(async()=>{
         gate.style.display='none';
         requestAnimationFrame(tick);
