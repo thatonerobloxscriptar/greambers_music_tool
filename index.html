@@ -469,11 +469,6 @@ const ui={
 };
 
 // ── Loader ──
-requestAnimationFrame(()=>{
-  ui.rowS.classList.add('drop-in','d1');
-  ui.rowT.classList.add('drop-in','d2');
-  ui.rowA.classList.add('drop-in','d3');
-});
 function clamp(n){return Math.max(0,Math.min(1,n));}
 const pg={st:0,tt:0,at:0,ss:0,ts:0,as:0,dS:false,dT:false,dA:false};
 function setSP(v,s){pg.st=clamp(v);if(s!=null){ui.subS.textContent=s;ui.subS.style.opacity='1';}}
@@ -967,12 +962,22 @@ ui.settingsPanel.addEventListener('click',(e)=>{
   const gate=$id('ageGate');
   const ageConfirmed=localStorage.getItem('gmt_age_confirmed')==='true';
 
-  if(ageConfirmed){
-    // Already confirmed — skip gate, boot
-    gate.style.display='none';
+  function startApp(){
+    $id('loader').style.display='grid';
     ui.settingsBtn.classList.add('visible');
+    // kick off animations fresh
+    requestAnimationFrame(()=>{
+      ui.rowS.classList.add('drop-in','d1');
+      ui.rowT.classList.add('drop-in','d2');
+      ui.rowA.classList.add('drop-in','d3');
+    });
     requestAnimationFrame(tick);
-    await Promise.all([loadSongs(),loadTool()]);
+    Promise.all([loadSongs(),loadTool()]);
+  }
+
+  if(ageConfirmed){
+    gate.style.display='none';
+    startApp();
   } else {
     // Show gate, hide loader until confirmed
     $id('loader').style.display='none';
@@ -990,15 +995,11 @@ ui.settingsPanel.addEventListener('click',(e)=>{
     btn.addEventListener('click',()=>{
       if(!checked)return;
       localStorage.setItem('gmt_age_confirmed','true');
-      // Send age confirmation to backend
       apiPost('/update-key',{uq,updates:{ageConfirmed:true}});
       gate.classList.add('dismissed');
-      $id('loader').style.display='grid';
-      ui.settingsBtn.classList.add('visible');
-      setTimeout(async()=>{
+      setTimeout(()=>{
         gate.style.display='none';
-        requestAnimationFrame(tick);
-        await Promise.all([loadSongs(),loadTool()]);
+        startApp();
       },420);
     });
   }
