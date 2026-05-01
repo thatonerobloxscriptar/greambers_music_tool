@@ -25,24 +25,26 @@
     /* ── LOADER ── */
     #loader{position:fixed;inset:0;display:grid;place-items:center;z-index:9999;transition:opacity 420ms ease,transform 420ms ease;}
     #loader.is-done{opacity:0;transform:scale(1.01);pointer-events:none;}
-    .loader-stack{width:var(--barW);display:grid;gap:22px;padding:26px 18px;border-radius:22px;background:linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.04));border:1px solid var(--stroke);box-shadow:0 20px 80px rgba(0,0,0,0.6);backdrop-filter:blur(12px);position:relative;overflow:hidden;}
+    .loader-stack{width:var(--barW);display:grid;gap:22px;padding:26px 18px;border-radius:22px;background:linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.04));border:1px solid var(--stroke);box-shadow:0 20px 80px rgba(0,0,0,0.6);backdrop-filter:blur(12px);position:relative;}
     .loader-stack::before{content:"";position:absolute;inset:-2px;background:radial-gradient(700px 200px at 30% 0%,rgba(255,255,255,0.09),transparent 65%);pointer-events:none;}
-    .load-row{display:grid;gap:10px;transform:translateY(-110vh);opacity:0;filter:blur(6px);}
-    .load-row.drop-in{animation:dropIn 820ms cubic-bezier(.2,1.15,.2,1) forwards;}
-    .load-row.drop-in.d1{animation-delay:80ms;}.load-row.drop-in.d2{animation-delay:170ms;}.load-row.drop-in.d3{animation-delay:260ms;}
-    @keyframes dropIn{0%{transform:translateY(-110vh);opacity:0;filter:blur(8px);}60%{transform:translateY(14px);opacity:1;filter:blur(1px);}78%{transform:translateY(-6px);}100%{transform:translateY(0);filter:blur(0);}}
-    .lbl{font-size:15px;font-weight:600;display:flex;align-items:baseline;justify-content:space-between;gap:12px;opacity:0;transform:translateY(8px);filter:blur(6px);}
-    .load-row.drop-in .lbl{animation:fadeUp 720ms cubic-bezier(.2,1,.2,1) forwards;animation-delay:380ms;}
-    .load-row.drop-in.d2 .lbl{animation-delay:470ms;}
-    .load-row.drop-in.d3 .lbl{animation-delay:560ms;}
-    @keyframes fadeUp{0%{opacity:0;transform:translateY(10px);filter:blur(7px);}100%{opacity:1;transform:translateY(0);filter:blur(0);}}
+    .load-row{display:grid;gap:10px;opacity:0;transform:translateY(12px);filter:blur(4px);transition:opacity 500ms ease,transform 500ms ease,filter 500ms ease;}
+    .load-row.show{opacity:1;transform:translateY(0);filter:blur(0);}
+    .lbl{font-size:15px;font-weight:600;display:flex;align-items:baseline;justify-content:space-between;gap:12px;}
     .pct{font-variant-numeric:tabular-nums;color:var(--muted);font-weight:600;min-width:56px;text-align:right;}
     .bar{position:relative;height:var(--barH);border-radius:var(--radius);background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.09);overflow:hidden;}
     .fill{height:100%;width:0%;border-radius:var(--radius);background:linear-gradient(90deg,rgba(255,255,255,0.16),rgba(255,255,255,0.34),rgba(255,255,255,0.20));will-change:width;}
     .bar::after{content:"";position:absolute;top:-60%;left:-40%;width:40%;height:220%;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.09),transparent);transform:skewX(-18deg);animation:shimmer 1.3s linear infinite;pointer-events:none;}
     @keyframes shimmer{0%{left:-40%;}100%{left:110%;}}
-    .substatus{font-size:12px;color:var(--muted);margin-top:-2px;min-height:1.2em;opacity:0;filter:blur(6px);}
-    .load-row.drop-in .substatus{animation:fadeUp 700ms cubic-bezier(.2,1,.2,1) forwards;animation-delay:520ms;}
+    .substatus{font-size:12px;color:var(--muted);margin-top:-2px;min-height:1.2em;}
+
+    /* loader fallback message */
+    #loaderFallback{
+      display:none;text-align:center;
+      font-size:13px;color:var(--muted);
+      padding:8px 12px;
+      line-height:1.5;
+    }
+    #loaderFallback.visible{display:block;}
 
     /* ── APP ── */
     #app{position:fixed;inset:0;display:none;overflow:auto;padding:18px;padding-bottom:110px;}
@@ -121,6 +123,15 @@
     .search-empty.visible{display:block;}
     /* fade cards in/out during filter */
     .song.hidden{display:none;}
+
+    /* ── CREDIT NOTE ── */
+    .credit-note{
+      padding:14px 16px 16px;
+      font-size:12px;
+      color:rgba(255,255,255,0.3);
+      text-align:center;
+      line-height:1.5;
+    }
 
     /* ── FLYING ICON (the real one that animates) ── */
     #flyIcon{
@@ -210,6 +221,69 @@
 
     /* wipe canvas on song cards */
     .wipe-canvas{position:absolute;inset:0;border-radius:14px;pointer-events:none;z-index:2;}
+
+    /* ── SONG/VIDEO TOGGLE (inside fsOverlay) ── */
+    .fs-mode-toggle{
+      display:inline-flex;border-radius:8px;overflow:hidden;
+      border:1px solid rgba(255,255,255,0.12);
+      background:rgba(0,0,0,0.3);
+      margin-bottom:4px;
+    }
+    .fs-mode-btn{
+      padding:6px 18px;font-size:12.5px;font-weight:700;
+      color:rgba(255,255,255,0.45);cursor:pointer;
+      transition:background 160ms ease,color 160ms ease;
+      user-select:none;
+    }
+    .fs-mode-btn.active{background:var(--accent);color:#fff;}
+    .fs-mode-btn.disabled{opacity:0.3;cursor:default;pointer-events:none;}
+
+    /* ── VIDEO PLAYER OVERLAY ── */
+    #videoOverlay{
+      position:fixed;inset:0;z-index:450;
+      background:#000;
+      display:none;
+    }
+    #videoOverlay.active{display:block;}
+    #videoEl{
+      width:100%;height:100%;
+      object-fit:contain;
+      display:block;
+    }
+    /* mouse-reveal controls */
+    #videoTopBar{
+      position:absolute;top:0;left:0;right:0;
+      padding:20px 28px;
+      background:linear-gradient(180deg,rgba(0,0,0,0.7),transparent);
+      opacity:0;transition:opacity 300ms ease;
+      pointer-events:none;z-index:2;
+    }
+    #videoTopBar.show{opacity:1;pointer-events:all;}
+    #videoTopTitle{font-size:clamp(16px,2.5vw,28px);font-weight:800;}
+    #videoBottomBar{
+      position:absolute;bottom:0;left:0;right:0;
+      padding:14px 28px 22px;
+      background:linear-gradient(0deg,rgba(0,0,0,0.7),transparent);
+      opacity:0;transition:opacity 300ms ease;
+      pointer-events:none;z-index:2;
+      display:flex;flex-direction:column;gap:10px;
+    }
+    #videoBottomBar.show{opacity:1;pointer-events:all;}
+    .vid-scrub-wrap{position:relative;height:5px;border-radius:99px;background:rgba(255,255,255,0.2);cursor:pointer;overflow:hidden;}
+    .vid-scrub-fill{height:100%;width:0%;border-radius:99px;background:var(--accent);pointer-events:none;}
+    .vid-controls{display:flex;align-items:center;gap:12px;}
+    .vid-btn{width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);display:grid;place-items:center;cursor:pointer;font-size:15px;color:#fff;transition:background 130ms ease;}
+    .vid-btn:hover{background:rgba(255,255,255,0.15);}
+    .vid-btn.pp{width:48px;height:48px;font-size:19px;background:var(--accent);border-color:transparent;}
+    .vid-btn.pp:hover{filter:brightness(1.1);}
+    .vid-times{font-size:12px;color:rgba(255,255,255,0.7);font-variant-numeric:tabular-nums;}
+    .vid-vol{display:flex;align-items:center;gap:6px;margin-left:auto;}
+    .vid-vol .vol-icon{font-size:14px;cursor:pointer;}
+    input[type=range].vidvol{-webkit-appearance:none;appearance:none;width:90px;height:3px;border-radius:99px;background:rgba(255,255,255,0.2);outline:none;cursor:pointer;}
+    input[type=range].vidvol::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--accent);}
+    input[type=range].vidvol::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--accent);border:none;}
+    .vid-min{width:32px;height:32px;border-radius:8px;border:1px solid rgba(255,255,255,0.13);background:rgba(255,255,255,0.06);display:grid;place-items:center;cursor:pointer;font-size:14px;color:rgba(255,255,255,0.6);transition:background 130ms ease;}
+    .vid-min:hover{background:rgba(255,255,255,0.12);}
 
     /* ── AGE GATE ── */
     #ageGate{
@@ -366,6 +440,7 @@
       <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="fill" id="fillA"></div></div>
       <div class="substatus" id="subA"></div>
     </div>
+    <div id="loaderFallback">The tool is still loading but the loading ui is kinda broken. Please be patient!</div>
   </div>
 </div>
 
@@ -391,6 +466,7 @@
       <div class="songlist" id="songList"></div>
       <div class="search-empty" id="searchEmpty">No songs match your search.</div>
       <div class="empty" id="emptyState" style="display:none;"></div>
+      <div class="credit-note">Made by Greambers and Claude. All songs have been pulled from YouTube Music or Soundcloud. Thanks for using ;)</div>
     </div>
   </div>
 </div>
@@ -420,6 +496,10 @@
 <!-- Fullscreen overlay -->
 <div id="fsOverlay">
   <div id="fsContent">
+    <div class="fs-mode-toggle">
+      <div class="fs-mode-btn active" id="fsModeAudio">Song</div>
+      <div class="fs-mode-btn disabled" id="fsModeVideo">Video</div>
+    </div>
     <div id="fsTitle">—</div>
     <div>
       <div class="fs-scrub-wrap" id="fsScrub"><div class="fs-scrub-fill" id="fsScrubFill"></div></div>
@@ -438,10 +518,31 @@
   </div>
 </div>
 
+<!-- Video player overlay -->
+<div id="videoOverlay">
+  <video id="videoEl" playsinline></video>
+  <div id="videoTopBar"><div id="videoTopTitle">—</div></div>
+  <div id="videoBottomBar">
+    <div class="vid-scrub-wrap" id="vidScrub"><div class="vid-scrub-fill" id="vidScrubFill"></div></div>
+    <div class="vid-controls">
+      <div class="vid-btn" id="vidPrev">⏮</div>
+      <div class="vid-btn pp" id="vidPlay">▶</div>
+      <div class="vid-btn" id="vidNext">⏭</div>
+      <div class="vid-times"><span id="vidCur">0:00</span> / <span id="vidDur">0:00</span></div>
+      <div class="vid-vol">
+        <span class="vol-icon" id="vidVolIcon">🔊</span>
+        <input type="range" class="vidvol" id="vidVolSlider" min="0" max="1" step="0.01" value="1">
+      </div>
+      <div class="vid-min" id="vidMin" title="Exit video">⊟</div>
+    </div>
+  </div>
+</div>
+
 <script>
 'use strict';
 const AUDIO_EXTS=['mp3','ogg','wav','flac','m4a','aac'];
 const ICON_EXTS=['png','jpg','jpeg','webp','gif','svg'];
+const VIDEO_EXTS=['mp4','webm','mkv'];
 
 function $id(id){return document.getElementById(id);}
 const ui={
@@ -466,6 +567,15 @@ const ui={
   searchEmpty:$id('searchEmpty'),
   settingsBtn:$id('settingsBtn'),settingsPanel:$id('settingsPanel'),
   settingsClose:$id('settingsClose'),settingsUQ:$id('settingsUQ'),
+  fsModeAudio:$id('fsModeAudio'),fsModeVideo:$id('fsModeVideo'),
+  videoOverlay:$id('videoOverlay'),videoEl:$id('videoEl'),
+  videoTopBar:$id('videoTopBar'),videoTopTitle:$id('videoTopTitle'),
+  videoBottomBar:$id('videoBottomBar'),
+  vidScrub:$id('vidScrub'),vidScrubFill:$id('vidScrubFill'),
+  vidPlay:$id('vidPlay'),vidPrev:$id('vidPrev'),vidNext:$id('vidNext'),
+  vidCur:$id('vidCur'),vidDur:$id('vidDur'),
+  vidVolIcon:$id('vidVolIcon'),vidVolSlider:$id('vidVolSlider'),
+  vidMin:$id('vidMin'),
 };
 
 // ── Loader ──
@@ -487,8 +597,11 @@ function doneLoad(){ui.loader.setAttribute('aria-busy','false');ui.loader.classL
 // ── Audio ──
 const audio=new Audio();
 let songs=[],curIdx=-1,cards=[],iconUrls=[],preloadedUrls=[];
+let videoUrls=[];  // preloaded video blob URLs (null if no video)
 let isFull=false;
-audio.volume=1;
+let isVideoMode=false;  // currently showing video player
+let videoMouseTimer=null;
+audio.volume=parseFloat(localStorage.getItem('gmt_volume'))||1;
 
 function fmt(s){if(!isFinite(s)||isNaN(s))return'0:00';const m=Math.floor(s/60),sec=Math.floor(s%60);return`${m}:${sec.toString().padStart(2,'0')}`;}
 function esc(s){return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');}
@@ -500,7 +613,10 @@ audio.addEventListener('timeupdate',()=>{
   ui.fsCur.textContent=fmt(audio.currentTime);
 });
 audio.addEventListener('loadedmetadata',()=>{ui.fsDur.textContent=fmt(audio.duration);});
-audio.addEventListener('ended',()=>playIdx(curIdx+1));
+audio.addEventListener('ended',()=>{
+  const nextIdx=((curIdx+1)%songs.length+songs.length)%songs.length;
+  playIdx(nextIdx);
+});
 audio.addEventListener('play',()=>setPlaySymbol('⏸'));
 audio.addEventListener('pause',()=>setPlaySymbol('▶'));
 
@@ -515,7 +631,10 @@ function syncVol(){
   ui.volSlider.value=v;ui.fsVolSlider.value=v;
   const ic=v<0.05?'🔇':v<0.5?'🔉':'🔊';
   ui.volIcon.textContent=ic;ui.fsVolIcon.textContent=ic;
+  localStorage.setItem('gmt_volume',v);
 }
+// init sliders to saved volume
+ui.volSlider.value=audio.volume;ui.fsVolSlider.value=audio.volume;syncVol();
 ui.volSlider.addEventListener('input',()=>{audio.volume=+ui.volSlider.value;syncVol();});
 ui.fsVolSlider.addEventListener('input',()=>{audio.volume=+ui.fsVolSlider.value;syncVol();});
 
@@ -532,7 +651,154 @@ ui.mPrev.addEventListener('click',()=>playIdx(curIdx-1));ui.fsPrev.addEventListe
 ui.mNext.addEventListener('click',()=>playIdx(curIdx+1));ui.fsNext.addEventListener('click',()=>playIdx(curIdx+1));
 ui.mFS.addEventListener('click',openFS);
 ui.fsMin.addEventListener('click',closeFS);
-function togglePlay(){if(curIdx<0)return;audio.paused?audio.play():audio.pause();}
+function togglePlay(){if(curIdx<0)return;if(isVideoMode){ui.videoEl.paused?ui.videoEl.play():ui.videoEl.pause();}else{audio.paused?audio.play():audio.pause();}}
+
+// ── Video find ──
+async function findVideo(name){
+  for(const ext of VIDEO_EXTS){
+    const url=`./Videos/${encodeURIComponent(name)}.${ext}`;
+    try{const r=await fetch(url,{method:'HEAD',cache:'no-store'});if(r.ok)return url;}catch{}
+  }
+  return null;
+}
+
+// ── Video player logic ──
+const vidEl=ui.videoEl;
+vidEl.addEventListener('timeupdate',()=>{
+  if(!isVideoMode)return;
+  const p=vidEl.duration?(vidEl.currentTime/vidEl.duration)*100:0;
+  ui.vidScrubFill.style.width=p+'%';
+  ui.vidCur.textContent=fmt(vidEl.currentTime);
+});
+vidEl.addEventListener('loadedmetadata',()=>{ui.vidDur.textContent=fmt(vidEl.duration);});
+vidEl.addEventListener('play',()=>{ui.vidPlay.textContent='⏸';});
+vidEl.addEventListener('pause',()=>{ui.vidPlay.textContent='▶';});
+vidEl.addEventListener('ended',()=>{
+  // next song — check if it has a video too
+  const nextIdx=((curIdx+1)%songs.length+songs.length)%songs.length;
+  if(videoUrls[nextIdx]){
+    // next song also has video — keep video mode
+    playIdx(nextIdx);
+  } else {
+    // no video — exit video mode, play normally
+    exitVideoMode();
+    playIdx(nextIdx);
+  }
+});
+
+// video scrubber
+ui.vidScrub.addEventListener('click',e=>{
+  if(!vidEl.duration)return;
+  const r=ui.vidScrub.getBoundingClientRect();
+  vidEl.currentTime=((e.clientX-r.left)/r.width)*vidEl.duration;
+});
+
+// video play/prev/next
+ui.vidPlay.addEventListener('click',togglePlay);
+ui.vidPrev.addEventListener('click',()=>{exitVideoMode();playIdx(curIdx-1);});
+ui.vidNext.addEventListener('click',()=>{
+  const nextIdx=((curIdx+1)%songs.length+songs.length)%songs.length;
+  if(videoUrls[nextIdx]){playIdx(nextIdx);}
+  else{exitVideoMode();playIdx(nextIdx);}
+});
+ui.vidMin.addEventListener('click',()=>{exitVideoMode();});
+
+// video volume
+ui.vidVolSlider.addEventListener('input',()=>{
+  vidEl.volume=+ui.vidVolSlider.value;
+  audio.volume=vidEl.volume;
+  syncVol();
+  const v=vidEl.volume;
+  ui.vidVolIcon.textContent=v<0.05?'🔇':v<0.5?'🔉':'🔊';
+});
+
+// mouse reveal for video controls
+ui.videoOverlay.addEventListener('mousemove',()=>{
+  if(!isVideoMode)return;
+  ui.videoTopBar.classList.add('show');
+  ui.videoBottomBar.classList.add('show');
+  document.body.style.cursor='';
+  clearTimeout(videoMouseTimer);
+  videoMouseTimer=setTimeout(()=>{
+    ui.videoTopBar.classList.remove('show');
+    ui.videoBottomBar.classList.remove('show');
+    document.body.style.cursor='none';
+  },2500);
+});
+ui.videoOverlay.addEventListener('mouseleave',()=>{
+  document.body.style.cursor='';
+});
+// click on video to toggle play
+vidEl.addEventListener('click',()=>{
+  vidEl.paused?vidEl.play():vidEl.pause();
+});
+
+function enterVideoMode(){
+  if(curIdx<0||!videoUrls[curIdx])return;
+  isVideoMode=true;
+  // pause audio
+  audio.pause();
+  // show video overlay
+  ui.videoOverlay.classList.add('active');
+  ui.videoTopTitle.textContent=songs[curIdx];
+  vidEl.src=videoUrls[curIdx];
+  vidEl.volume=audio.volume;
+  ui.vidVolSlider.value=audio.volume;
+  const v=audio.volume;
+  ui.vidVolIcon.textContent=v<0.05?'🔇':v<0.5?'🔉':'🔊';
+  vidEl.play().catch(()=>{});
+  // hide the FS song overlay
+  ui.fsOverlay.classList.remove('active');
+  // show controls briefly
+  ui.videoTopBar.classList.add('show');
+  ui.videoBottomBar.classList.add('show');
+  clearTimeout(videoMouseTimer);
+  videoMouseTimer=setTimeout(()=>{
+    ui.videoTopBar.classList.remove('show');
+    ui.videoBottomBar.classList.remove('show');
+    document.body.style.cursor='none';
+  },2500);
+}
+
+function exitVideoMode(){
+  isVideoMode=false;
+  vidEl.pause();
+  vidEl.src='';
+  ui.videoOverlay.classList.remove('active');
+  ui.videoTopBar.classList.remove('show');
+  ui.videoBottomBar.classList.remove('show');
+  document.body.style.cursor='';
+  clearTimeout(videoMouseTimer);
+  // restore FS song mode if still fullscreen
+  if(isFull){
+    ui.fsOverlay.classList.add('active');
+    ui.fsModeAudio.classList.add('active');
+    ui.fsModeVideo.classList.remove('active');
+    // resume audio
+    audio.play().catch(()=>{});
+  }
+}
+
+// ── Song/Video toggle buttons ──
+ui.fsModeAudio.addEventListener('click',()=>{
+  if(!isVideoMode)return;
+  exitVideoMode();
+});
+ui.fsModeVideo.addEventListener('click',()=>{
+  if(isVideoMode)return;
+  if(curIdx<0||!videoUrls[curIdx])return;
+  ui.fsModeAudio.classList.remove('active');
+  ui.fsModeVideo.classList.add('active');
+  enterVideoMode();
+});
+
+// update toggle state when song changes
+function updateVideoToggle(idx){
+  const hasVid=!!videoUrls[idx];
+  ui.fsModeVideo.classList.toggle('disabled',!hasVid);
+  ui.fsModeAudio.classList.add('active');
+  ui.fsModeVideo.classList.remove('active');
+}
 
 // ── FLIP icon animation ──
 // The flyIcon element travels between the card iconbox position and the FS landing zone (top-left ~56,48).
@@ -613,6 +879,18 @@ async function openFS(){
 
 async function closeFS(){
   if(!isFull)return;
+  // exit video mode if active
+  if(isVideoMode){
+    isVideoMode=false;
+    vidEl.pause();vidEl.src='';
+    ui.videoOverlay.classList.remove('active');
+    ui.videoTopBar.classList.remove('show');
+    ui.videoBottomBar.classList.remove('show');
+    document.body.style.cursor='';
+    clearTimeout(videoMouseTimer);
+    // resume audio
+    audio.play().catch(()=>{});
+  }
   isFull=false;
   ui.fsOverlay.classList.remove('active');
   const fly=ui.flyIcon;
@@ -686,9 +964,16 @@ async function playIdx(idx){
   idx=((idx%songs.length)+songs.length)%songs.length;
   const name=songs[idx];
   const prevIdx=curIdx;
+  const wasVideoMode=isVideoMode;
+
+  // If switching while in video mode, stop old video
+  if(isVideoMode&&prevIdx!==idx){
+    vidEl.pause();
+    vidEl.src='';
+  }
 
   // If switching while fullscreen: animate old icon back, wipe it, then fly new one up
-  if(isFull&&prevIdx>=0&&prevIdx!==idx){
+  if(isFull&&!isVideoMode&&prevIdx>=0&&prevIdx!==idx){
     // shrink old icon back to card
     isFull=false;
     ui.fsOverlay.classList.remove('active');
@@ -703,7 +988,7 @@ async function playIdx(idx){
     hideCardImg(prevIdx,false);
     doWipe(prevIdx);
     isFull=true; // will re-open for new song
-  } else if(prevIdx>=0&&prevIdx!==idx){
+  } else if(!isVideoMode&&prevIdx>=0&&prevIdx!==idx){
     doWipe(prevIdx);
   }
 
@@ -715,12 +1000,26 @@ async function playIdx(idx){
   curIdx=idx;
   markPlaying(idx);
   ui.miniBar.classList.add('visible');
+  updateVideoToggle(idx);
 
   // typewriter
   typewriter(name);
 
+  // if in video mode and new song has video, play video
+  if(wasVideoMode&&videoUrls[idx]){
+    isVideoMode=true;
+    ui.videoOverlay.classList.add('active');
+    ui.videoTopTitle.textContent=name;
+    vidEl.src=videoUrls[idx];
+    vidEl.volume=audio.volume;
+    vidEl.play().catch(()=>{});
+    ui.fsModeAudio.classList.remove('active');
+    ui.fsModeVideo.classList.add('active');
+    return;
+  }
+
   // if we should be showing fullscreen, fly new icon up
-  if(isFull){
+  if(isFull&&!isVideoMode){
     ui.fsOverlay.classList.add('active');
     const newCardRect=getCardIconRect(idx);
     if(newCardRect){
@@ -809,7 +1108,7 @@ function renderSongs(list,src){
   ui.srcMeta.textContent=`Source: ${src}`;
   ui.songPill.textContent=`${list.length} song${list.length===1?'':'s'}`;
   ui.songList.innerHTML='';ui.emptyState.style.display='none';
-  songs=list;cards=[];iconUrls=new Array(list.length).fill(null);preloadedUrls=new Array(list.length).fill(null);
+  songs=list;cards=[];iconUrls=new Array(list.length).fill(null);preloadedUrls=new Array(list.length).fill(null);videoUrls=new Array(list.length).fill(null);
   if(!list.length){
     ui.emptyState.style.display='block';
     ui.emptyState.innerHTML=`No songs found in <span class="pill">Songs/index.json</span>.<br><br>Make sure <span class="pill">Songs/index.json</span> is committed and Netlify has run the build script.`;
@@ -873,11 +1172,12 @@ async function loadSongs(){
 
       // Now preload all audio (separate bar)
       if(list.length){
-        setAP(0.02,'Finding audio files…');
+        setAP(0.02,'Finding audio & video files…');
         let loaded=0;
         const total=list.length;
         await Promise.all(list.map(async(name,idx)=>{
           try{
+            // preload audio
             const url=await findAudio(name);
             if(url){
               const resp=await fetch(url);
@@ -886,11 +1186,15 @@ async function loadSongs(){
                 preloadedUrls[idx]=URL.createObjectURL(blob);
               }
             }
+            // detect video (HEAD only — don't preload the full video file)
+            const vidUrl=await findVideo(name);
+            if(vidUrl)videoUrls[idx]=vidUrl;
           }catch(e){console.warn('[PRELOAD] Failed:',name,e.message);}
           loaded++;
           setAP(loaded/total,`${loaded} / ${total} songs`);
         }));
-        setAP(1,'All songs preloaded');
+        const vidCount=videoUrls.filter(Boolean).length;
+        setAP(1,`All preloaded (${vidCount} video${vidCount===1?'':'s'} found)`);
       } else {
         setAP(1,'No songs to preload');
       }
@@ -965,12 +1269,18 @@ ui.settingsPanel.addEventListener('click',(e)=>{
   function startApp(){
     $id('loader').style.display='grid';
     ui.settingsBtn.classList.add('visible');
-    // kick off animations fresh
-    requestAnimationFrame(()=>{
-      ui.rowS.classList.add('drop-in','d1');
-      ui.rowT.classList.add('drop-in','d2');
-      ui.rowA.classList.add('drop-in','d3');
-    });
+    // stagger the row reveals
+    setTimeout(()=>ui.rowS.classList.add('show'),50);
+    setTimeout(()=>ui.rowT.classList.add('show'),150);
+    setTimeout(()=>ui.rowA.classList.add('show'),250);
+    // fallback: if after 3s no bars are visible, show message
+    setTimeout(()=>{
+      const rows=[ui.rowS,ui.rowT,ui.rowA];
+      const anyVisible=rows.some(r=>r.classList.contains('show')&&r.offsetHeight>0&&getComputedStyle(r).opacity!=='0');
+      if(!anyVisible){
+        $id('loaderFallback').classList.add('visible');
+      }
+    },3000);
     requestAnimationFrame(tick);
     Promise.all([loadSongs(),loadTool()]);
   }
