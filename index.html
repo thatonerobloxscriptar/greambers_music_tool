@@ -443,7 +443,7 @@
         <div class="fmt-btn" data-kind="icon" data-fmt="webp">WEBP</div>
         <div class="fmt-btn" data-kind="icon" data-fmt="jpeg">JPEG</div>
       </div>
-      <div class="fmt-hint">For songs with an icon folder, picks which format to load. Switching reloads icons but keeps preloaded songs &amp; videos.</div>
+      <div class="fmt-hint">Picks which icon format to load. Applied when you close Settings — reloads icons only.</div>
     </div>
     <div class="settings-row">
       <div class="settings-label">Audio Format (Triple Trouble)</div>
@@ -452,7 +452,7 @@
         <div class="fmt-btn" data-kind="audio" data-fmt="wav">WAV</div>
         <div class="fmt-btn" data-kind="audio" data-fmt="ogg">OGG</div>
       </div>
-      <div class="fmt-hint">For songs with an audio folder, picks which format to load. Switching reloads audio but keeps preloaded videos.</div>
+      <div class="fmt-hint">Picks which audio format to play. Applied when you close Settings. Audio loads only when you play a song.</div>
     </div>
   </div>
 </div>
@@ -471,7 +471,7 @@
       <div class="substatus" id="subT"></div>
     </div>
     <div class="load-row" id="rowA">
-      <div class="lbl"><span>Preloading Audio…</span><span class="pct" id="pctA">0%</span></div>
+      <div class="lbl"><span>Loading icons…</span><span class="pct" id="pctA">0%</span></div>
       <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="fill" id="fillA"></div></div>
       <div class="substatus" id="subA"></div>
     </div>
@@ -688,11 +688,18 @@ ui.mFS.addEventListener('click',openFS);
 ui.fsMin.addEventListener('click',closeFS);
 function togglePlay(){if(curIdx<0)return;if(isVideoMode){ui.videoEl.paused?ui.videoEl.play():ui.videoEl.pause();}else{audio.paused?audio.play():audio.pause();}}
 
+// ── fetch with timeout (so one stalled request can never hang loading) ──
+function fetchTO(url,opts={},ms=8000){
+  const c=new AbortController();
+  const t=setTimeout(()=>c.abort(),ms);
+  return fetch(url,{...opts,signal:c.signal}).finally(()=>clearTimeout(t));
+}
+
 // ── Video find ──
 async function findVideo(name){
   for(const ext of VIDEO_EXTS){
     const url=`./Videos/${encodeURIComponent(name)}.${ext}`;
-    try{const r=await fetch(url,{method:'HEAD',cache:'no-store'});if(r.ok)return url;}catch{}
+    try{const r=await fetchTO(url,{method:'HEAD',cache:'no-store'});if(r.ok)return url;}catch{}
   }
   return null;
 }
@@ -1048,6 +1055,10 @@ async function playIdx(idx){
   markPlaying(idx);
   ui.miniBar.classList.add('visible');
   updateVideoToggle(idx);
+  // detect video the first time this song is opened (non-blocking)
+  if(videoUrls[idx]===undefined){
+    findVideo(name).then(v=>{videoUrls[idx]=v||null;if(idx===curIdx)updateVideoToggle(idx);}).catch(()=>{videoUrls[idx]=null;});
+  }
 
   // typewriter
   typewriter(name);
@@ -1077,9 +1088,10 @@ async function playIdx(idx){
     }
   }
 
-  // play audio (use preloaded blob URL if available, otherwise find it)
+  // play audio — lazy: fetch on demand, then cache the resolved URL so replays
+  // skip the lookup. Only the song you actually play gets downloaded.
   const url=preloadedUrls[idx]||await findAudio(name);
-  if(url){audio.src=url;audio.play().catch(()=>{});}
+  if(url){preloadedUrls[idx]=url;audio.src=url;audio.play().catch(()=>{});}
 }
 
 function markPlaying(idx){
@@ -1149,7 +1161,7 @@ function setAudioFormat(f){localStorage.setItem('gmt_audio_format',f);}
 // HEAD check that also rejects SPA HTML fallbacks (same trap that broke icons).
 async function audioOk(url){
   try{
-    const r=await fetch(url,{method:'HEAD',cache:'no-store'});
+    const r=await fetchTO(url,{method:'HEAD',cache:'no-store'});
     if(!r.ok)return false;
     const ct=(r.headers.get('Content-Type')||'').toLowerCase();
     if(ct.includes('text/html'))return false;
@@ -1157,33 +1169,30 @@ async function audioOk(url){
   }catch{return false;}
 }
 
+// Resolve audio for the CURRENTLY selected format only (folder, then flat).
+// No cross-format fallback — switching the format is what looks for the others.
 async function findAudio(name){
   const enc=encodeURIComponent(name);
-  const primary=AUDIO_FORMAT_EXTS[getAudioFormat()];
-  const others=AUDIO_EXTS.filter(e=>!primary.includes(e));
-  // 1) folder + selected format
-  for(const ext of primary){const u=`./Songs/${enc}/${enc}.${ext}`;if(await audioOk(u))return u;}
-  // 2) flat file + selected format
-  for(const ext of primary){const u=`./Songs/${enc}.${ext}`;if(await audioOk(u))return u;}
-  // 3) folder + any other format
-  for(const ext of others){const u=`./Songs/${enc}/${enc}.${ext}`;if(await audioOk(u))return u;}
-  // 4) flat file + any other format (legacy)
-  for(const ext of others){const u=`./Songs/${enc}.${ext}`;if(await audioOk(u))return u;}
+  const exts=AUDIO_FORMAT_EXTS[getAudioFormat()];
+  for(const ext of exts){const u=`./Songs/${enc}/${enc}.${ext}`;if(await audioOk(u))return u;}
+  for(const ext of exts){const u=`./Songs/${enc}.${ext}`;if(await audioOk(u))return u;}
   return null;
 }
 
-// Switch audio format: drop stale preloaded audio blobs (they're the old
-// format) but leave preloaded VIDEOS alone. Reload the current track in the
-// new format at the same spot; other tracks re-resolve on demand.
+// Switch audio format: clear the resolved-audio cache (old format) and reload
+// the current track in the new format at the same spot. Audio is lazy, so
+// nothing else is downloaded; videos are untouched.
 async function reloadAudio(){
   for(let i=0;i<preloadedUrls.length;i++){
-    if(preloadedUrls[i]){try{URL.revokeObjectURL(preloadedUrls[i]);}catch{}preloadedUrls[i]=null;}
+    const u=preloadedUrls[i];
+    if(u){if(typeof u==='string'&&u.startsWith('blob:')){try{URL.revokeObjectURL(u);}catch{}}preloadedUrls[i]=null;}
   }
   if(curIdx>=0&&!isVideoMode){
     const wasPlaying=!audio.paused;
     const t=audio.currentTime||0;
     const url=await findAudio(songs[curIdx]);
     if(url){
+      preloadedUrls[curIdx]=url;
       audio.src=url;
       const seek=()=>{try{audio.currentTime=t;}catch{}audio.removeEventListener('loadedmetadata',seek);};
       audio.addEventListener('loadedmetadata',seek);
@@ -1204,34 +1213,31 @@ function setIconFormat(f){localStorage.setItem('gmt_icon_format',f);}
 
 // Validate by actually loading the image — a HEAD 200 from an SPA host can be
 // an HTML fallback, which is what makes icons render as broken-image + filename.
-function loadImageOk(url){
+function loadImageOk(url,ms=8000){
   return new Promise(res=>{
     const img=new Image();
     let done=false;
-    img.onload=()=>{if(!done){done=true;res(img.naturalWidth>0);}};
-    img.onerror=()=>{if(!done){done=true;res(false);}};
+    const finish=v=>{if(!done){done=true;res(v);}};
+    img.onload=()=>finish(img.naturalWidth>0);
+    img.onerror=()=>finish(false);
+    setTimeout(()=>finish(false),ms);
     img.src=url;
   });
 }
 
+// Resolve icon for the CURRENTLY selected format only (folder, then flat).
 async function findIcon(name){
   const enc=encodeURIComponent(name);
-  const primary=FORMAT_EXTS[getIconFormat()];
-  const others=ICON_EXTS.filter(e=>!primary.includes(e));
-  // 1) folder + selected format (the main "triple trouble" path)
-  for(const ext of primary){const u=`./Icons/${enc}/${enc}.${ext}`;if(await loadImageOk(u))return u;}
-  // 2) flat file + selected format
-  for(const ext of primary){const u=`./Icons/${enc}.${ext}`;if(await loadImageOk(u))return u;}
-  // 3) folder + any other format (so folder icons still show if the chosen one is missing)
-  for(const ext of others){const u=`./Icons/${enc}/${enc}.${ext}`;if(await loadImageOk(u))return u;}
-  // 4) flat file + any other format (legacy single-icon support)
-  for(const ext of others){const u=`./Icons/${enc}.${ext}`;if(await loadImageOk(u))return u;}
+  const exts=FORMAT_EXTS[getIconFormat()];
+  for(const ext of exts){const u=`./Icons/${enc}/${enc}.${ext}`;if(await loadImageOk(u))return u;}
+  for(const ext of exts){const u=`./Icons/${enc}.${ext}`;if(await loadImageOk(u))return u;}
   return null;
 }
 
-// Re-resolve every icon with the current format and repaint cards, WITHOUT
-// touching preloadedUrls / videoUrls — so audio & video stay preloaded.
-async function reloadIcons(){
+// Re-resolve every icon with the current format and repaint cards (audio/video
+// untouched). Optional onP(fraction) drives the loading bar during boot/switch.
+async function reloadIcons(onP){
+  let done=0;const total=songs.length||1;
   await Promise.all(songs.map(async(name,idx)=>{
     const url=await findIcon(name);
     iconUrls[idx]=url;
@@ -1241,6 +1247,7 @@ async function reloadIcons(){
       if(box)box.innerHTML=url?`<img src="${url}" alt="${esc(name)}">`:`<div class="icon-ph">♪</div>`;
     }
     if(idx===curIdx)setFlyContent(idx);
+    done++;if(onP)onP(done/total);
   }));
 }
 
@@ -1249,7 +1256,7 @@ function renderSongs(list,src){
   ui.srcMeta.textContent=`Source: ${src}`;
   ui.songPill.textContent=`${list.length} song${list.length===1?'':'s'}`;
   ui.songList.innerHTML='';ui.emptyState.style.display='none';
-  songs=list;cards=[];iconUrls=new Array(list.length).fill(null);preloadedUrls=new Array(list.length).fill(null);videoUrls=new Array(list.length).fill(null);
+  songs=list;cards=[];iconUrls=new Array(list.length).fill(null);preloadedUrls=new Array(list.length).fill(null);videoUrls=new Array(list.length);
   if(!list.length){
     ui.emptyState.style.display='block';
     ui.emptyState.innerHTML=`No songs found in <span class="pill">Songs/index.json</span>.<br><br>Make sure <span class="pill">Songs/index.json</span> is committed and Netlify has run the build script.`;
@@ -1270,20 +1277,14 @@ function renderSongs(list,src){
     card.addEventListener('click',go);
     card.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}});
     ui.songList.appendChild(card);cards.push(card);
-    // lazy icon load
-    (async()=>{
-      const url=await findIcon(name);
-      iconUrls[idx]=url;
-      if(url)iconBox.innerHTML=`<img src="${url}" alt="${esc(name)}">`;
-      // if this is the currently flying icon, update it
-      if(idx===curIdx)setFlyContent(idx);
-    })();
+    // icons are loaded afterwards in a tracked pass (see loadSongs) so the
+    // loading bar reflects them and we don't fire a request storm here.
   });
 }
 
 // ── Data fetch ──
 async function fetchJson(url,onP,prefix){
-  const res=await fetch(url,{cache:'no-store'});
+  const res=await fetchTO(url,{cache:'no-store'},15000);
   if(!res.ok)throw new Error(`HTTP ${res.status}`);
   const total=Number(res.headers.get('Content-Length'))||null;
   if(!res.body||!total){onP(0.65,`${prefix} Reading…`);const d=await res.json();onP(1,'Done');return d;}
@@ -1311,33 +1312,15 @@ async function loadSongs(){
       setSP(1,'Ready');
       pg.dS=true;
 
-      // Now preload all audio (separate bar)
+      // Path 1: no bulk audio download. Load only the icons (default format),
+      // tracked on the third bar. Audio loads when you play it; video is
+      // detected the first time you open a song.
       if(list.length){
-        setAP(0.02,'Finding audio & video files…');
-        let loaded=0;
-        const total=list.length;
-        await Promise.all(list.map(async(name,idx)=>{
-          try{
-            // preload audio
-            const url=await findAudio(name);
-            if(url){
-              const resp=await fetch(url);
-              if(resp.ok){
-                const blob=await resp.blob();
-                preloadedUrls[idx]=URL.createObjectURL(blob);
-              }
-            }
-            // detect video (HEAD only — don't preload the full video file)
-            const vidUrl=await findVideo(name);
-            if(vidUrl)videoUrls[idx]=vidUrl;
-          }catch(e){console.warn('[PRELOAD] Failed:',name,e.message);}
-          loaded++;
-          setAP(loaded/total,`${loaded} / ${total} songs`);
-        }));
-        const vidCount=videoUrls.filter(Boolean).length;
-        setAP(1,`All preloaded (${vidCount} video${vidCount===1?'':'s'} found)`);
+        setAP(0.04,'Loading icons…');
+        await reloadIcons(fr=>setAP(0.04+fr*0.92,'Loading icons…'));
+        setAP(1,'Ready');
       } else {
-        setAP(1,'No songs to preload');
+        setAP(1,'No songs');
       }
     }catch{
       setSP(1,'No Songs/index.json found');renderSongs([],'Not found');
@@ -1387,39 +1370,70 @@ function getOrCreateUQ(){
   return uq;
 }
 
-// ── Settings ──
+// ── Settings (changes are committed when you CLOSE the panel) ──
 const fmtBtns=[...document.querySelectorAll('.fmt-btn')];
+let pendingIcon=getIconFormat(),pendingAudio=getAudioFormat();
 function refreshFmtButtons(){
-  const ic=getIconFormat(),au=getAudioFormat();
   fmtBtns.forEach(b=>{
-    const want=b.dataset.kind==='audio'?au:ic;
+    const want=b.dataset.kind==='audio'?pendingAudio:pendingIcon;
     b.classList.toggle('active',b.dataset.fmt===want);
   });
 }
 refreshFmtButtons();
-fmtBtns.forEach(b=>b.addEventListener('click',async()=>{
-  const kind=b.dataset.kind,f=b.dataset.fmt;
-  if(kind==='audio'){
-    if(f===getAudioFormat())return;
-    setAudioFormat(f);refreshFmtButtons();
-    await reloadAudio();   // re-resolve audio; videos stay preloaded
-  }else{
-    if(f===getIconFormat())return;
-    setIconFormat(f);refreshFmtButtons();
-    await reloadIcons();   // re-resolve icons; audio & video stay preloaded
-  }
+fmtBtns.forEach(b=>b.addEventListener('click',()=>{
+  // just stage the choice — nothing reloads until Settings closes
+  if(b.dataset.kind==='audio')pendingAudio=b.dataset.fmt;
+  else pendingIcon=b.dataset.fmt;
+  refreshFmtButtons();
 }));
+
+// Bring the loader UI back for an in-session reload (songs already exist).
+function showLoaderAgain(){
+  Object.assign(pg,{st:0,tt:0,at:0,ss:0,ts:0,as:0,dS:false,dT:false,dA:false});
+  ui.loader.classList.remove('is-done');
+  ui.loader.style.display='grid';
+  ui.loader.setAttribute('aria-busy','true');
+  requestAnimationFrame(tick);
+}
+
+// Apply a committed format change. Icons re-resolve in the new format (with the
+// loading screen); audio is lazy so it only reloads the current track. Videos
+// stay as detected.
+async function applyFormatReload(iconChanged,audioChanged){
+  showLoaderAgain();
+  setSP(1,'Songs ready');pg.dS=true;
+  setTP(1,'Ready');pg.dT=true;
+  setAP(0.04,iconChanged?'Reloading icons…':'Applying…');
+  if(iconChanged){
+    await reloadIcons(fr=>setAP(0.04+fr*0.92,'Reloading icons…'));
+  }
+  if(audioChanged){
+    await reloadAudio();
+  }
+  setAP(1,'Done');pg.dA=true;
+  // tick() fades the loader back out once the bars fill
+}
+
+function commitSettings(){
+  ui.settingsPanel.classList.remove('open');
+  const iconChanged=pendingIcon!==getIconFormat();
+  const audioChanged=pendingAudio!==getAudioFormat();
+  if(iconChanged)setIconFormat(pendingIcon);
+  if(audioChanged)setAudioFormat(pendingAudio);
+  if((iconChanged||audioChanged)&&songs.length){
+    applyFormatReload(iconChanged,audioChanged);
+  }
+}
 
 ui.settingsBtn.addEventListener('click',()=>{
   ui.settingsUQ.textContent='UQ: '+getOrCreateUQ();
+  pendingIcon=getIconFormat();pendingAudio=getAudioFormat();
   refreshFmtButtons();
   ui.settingsPanel.classList.add('open');
 });
-ui.settingsClose.addEventListener('click',()=>{
-  ui.settingsPanel.classList.remove('open');
-});
+ui.settingsClose.addEventListener('click',commitSettings);
 ui.settingsPanel.addEventListener('click',(e)=>{
-  if(e.target===ui.settingsPanel)ui.settingsPanel.classList.remove('open');
+  if(e.target===ui.settingsPanel)commitSettings();
 });
 
 // ── Boot ──
