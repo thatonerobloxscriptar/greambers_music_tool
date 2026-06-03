@@ -388,6 +388,23 @@
       word-break:break-all;
       user-select:all;
     }
+    /* format toggle (triple trouble) */
+    .fmt-toggle{
+      display:flex;border-radius:10px;overflow:hidden;
+      border:1px solid rgba(255,255,255,0.12);
+      background:rgba(0,0,0,0.3);
+    }
+    .fmt-btn{
+      flex:1;text-align:center;padding:9px 0;
+      font-size:12.5px;font-weight:700;letter-spacing:0.4px;
+      color:rgba(255,255,255,0.45);cursor:pointer;
+      transition:background 160ms ease,color 160ms ease;
+      user-select:none;
+    }
+    .fmt-btn+.fmt-btn{border-left:1px solid rgba(255,255,255,0.08);}
+    .fmt-btn.active{background:var(--accent);color:#fff;}
+    .fmt-btn:not(.active):hover{background:rgba(255,255,255,0.06);color:var(--text);}
+    .fmt-hint{font-size:11px;color:rgba(255,255,255,0.35);line-height:1.45;margin-top:2px;}
   </style>
 </head>
 <body>
@@ -418,6 +435,24 @@
     <div class="settings-row">
       <div class="settings-label">Your Unique Key</div>
       <div class="settings-value" id="settingsUQ">—</div>
+    </div>
+    <div class="settings-row">
+      <div class="settings-label">Icon Format (Triple Trouble)</div>
+      <div class="fmt-toggle" id="fmtToggleIcon">
+        <div class="fmt-btn" data-kind="icon" data-fmt="png">PNG</div>
+        <div class="fmt-btn" data-kind="icon" data-fmt="webp">WEBP</div>
+        <div class="fmt-btn" data-kind="icon" data-fmt="jpeg">JPEG</div>
+      </div>
+      <div class="fmt-hint">For songs with an icon folder, picks which format to load. Switching reloads icons but keeps preloaded songs &amp; videos.</div>
+    </div>
+    <div class="settings-row">
+      <div class="settings-label">Audio Format (Triple Trouble)</div>
+      <div class="fmt-toggle" id="fmtToggleAudio">
+        <div class="fmt-btn" data-kind="audio" data-fmt="mp3">MP3</div>
+        <div class="fmt-btn" data-kind="audio" data-fmt="wav">WAV</div>
+        <div class="fmt-btn" data-kind="audio" data-fmt="ogg">OGG</div>
+      </div>
+      <div class="fmt-hint">For songs with an audio folder, picks which format to load. Switching reloads audio but keeps preloaded videos.</div>
     </div>
   </div>
 </div>
@@ -601,7 +636,7 @@ let videoUrls=[];  // preloaded video blob URLs (null if no video)
 let isFull=false;
 let isVideoMode=false;  // currently showing video player
 let videoMouseTimer=null;
-audio.volume=parseFloat(localStorage.getItem('gmt_volume'))||1;
+(()=>{const sv=localStorage.getItem('gmt_volume');const pv=parseFloat(sv);audio.volume=(sv!==null&&!isNaN(pv))?Math.max(0,Math.min(1,pv)):1;})();
 
 function fmt(s){if(!isFinite(s)||isNaN(s))return'0:00';const m=Math.floor(s/60),sec=Math.floor(s%60);return`${m}:${sec.toString().padStart(2,'0')}`;}
 function esc(s){return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');}
@@ -749,6 +784,9 @@ function enterVideoMode(){
   vidEl.play().catch(()=>{});
   // hide the FS song overlay
   ui.fsOverlay.classList.remove('active');
+  // hide the spinning fly icon so it doesn't float over the video
+  ui.flyIcon.classList.remove('spinning');
+  ui.flyIcon.style.display='none';
   // show controls briefly
   ui.videoTopBar.classList.add('show');
   ui.videoBottomBar.classList.add('show');
@@ -774,6 +812,15 @@ function exitVideoMode(){
     ui.fsOverlay.classList.add('active');
     ui.fsModeAudio.classList.add('active');
     ui.fsModeVideo.classList.remove('active');
+    // bring the spinning fly icon back to its fullscreen spot
+    setFlyContent(curIdx);
+    ui.flyIcon.style.display='block';
+    ui.flyIcon.style.left=FS_TARGET.x+'px';
+    ui.flyIcon.style.top=FS_TARGET.y+'px';
+    ui.flyIcon.style.width=FS_TARGET.size+'px';
+    ui.flyIcon.style.height=FS_TARGET.size+'px';
+    ui.flyIcon.style.borderRadius=FS_TARGET.br+'px';
+    ui.flyIcon.classList.add('spinning');
     // resume audio
     audio.play().catch(()=>{});
   }
@@ -1088,19 +1135,113 @@ function applyFilter(q){
   ui.searchEmpty.classList.toggle('visible',q.length>0&&visible===0);
 }
 
+// ── Audio format ("triple trouble") ──
+// Like icons: a song can have a folder Songs/<name>/ with the same track in
+// multiple formats (Songs/Song/Song.mp3/.wav/.ogg). Toggle picks the format.
+// Flat files (Songs/<name>.ext) still work. Defaults to mp3.
+const AUDIO_FORMAT_EXTS={mp3:['mp3'],wav:['wav'],ogg:['ogg']};
+function getAudioFormat(){
+  const f=localStorage.getItem('gmt_audio_format');
+  return (f==='mp3'||f==='wav'||f==='ogg')?f:'mp3';
+}
+function setAudioFormat(f){localStorage.setItem('gmt_audio_format',f);}
+
+// HEAD check that also rejects SPA HTML fallbacks (same trap that broke icons).
+async function audioOk(url){
+  try{
+    const r=await fetch(url,{method:'HEAD',cache:'no-store'});
+    if(!r.ok)return false;
+    const ct=(r.headers.get('Content-Type')||'').toLowerCase();
+    if(ct.includes('text/html'))return false;
+    return true;
+  }catch{return false;}
+}
+
 async function findAudio(name){
-  for(const ext of AUDIO_EXTS){
-    const url=`./Songs/${encodeURIComponent(name)}.${ext}`;
-    try{const r=await fetch(url,{method:'HEAD',cache:'no-store'});if(r.ok)return url;}catch{}
-  }
+  const enc=encodeURIComponent(name);
+  const primary=AUDIO_FORMAT_EXTS[getAudioFormat()];
+  const others=AUDIO_EXTS.filter(e=>!primary.includes(e));
+  // 1) folder + selected format
+  for(const ext of primary){const u=`./Songs/${enc}/${enc}.${ext}`;if(await audioOk(u))return u;}
+  // 2) flat file + selected format
+  for(const ext of primary){const u=`./Songs/${enc}.${ext}`;if(await audioOk(u))return u;}
+  // 3) folder + any other format
+  for(const ext of others){const u=`./Songs/${enc}/${enc}.${ext}`;if(await audioOk(u))return u;}
+  // 4) flat file + any other format (legacy)
+  for(const ext of others){const u=`./Songs/${enc}.${ext}`;if(await audioOk(u))return u;}
   return null;
 }
-async function findIcon(name){
-  for(const ext of ICON_EXTS){
-    const url=`./Icons/${encodeURIComponent(name)}.${ext}`;
-    try{const r=await fetch(url,{method:'HEAD',cache:'no-store'});if(r.ok)return url;}catch{}
+
+// Switch audio format: drop stale preloaded audio blobs (they're the old
+// format) but leave preloaded VIDEOS alone. Reload the current track in the
+// new format at the same spot; other tracks re-resolve on demand.
+async function reloadAudio(){
+  for(let i=0;i<preloadedUrls.length;i++){
+    if(preloadedUrls[i]){try{URL.revokeObjectURL(preloadedUrls[i]);}catch{}preloadedUrls[i]=null;}
   }
+  if(curIdx>=0&&!isVideoMode){
+    const wasPlaying=!audio.paused;
+    const t=audio.currentTime||0;
+    const url=await findAudio(songs[curIdx]);
+    if(url){
+      audio.src=url;
+      const seek=()=>{try{audio.currentTime=t;}catch{}audio.removeEventListener('loadedmetadata',seek);};
+      audio.addEventListener('loadedmetadata',seek);
+      if(wasPlaying)audio.play().catch(()=>{});
+    }
+  }
+}
+// ── Icon format ("triple trouble") ──
+// A song can have a folder Icons/<name>/ holding the same icon in multiple
+// formats (e.g. Icons/Song/Song.png, .webp, .jpg). The Settings toggle picks
+// which format to request. Flat single files (Icons/<name>.ext) still work.
+const FORMAT_EXTS={png:['png'],webp:['webp'],jpeg:['jpg','jpeg']};
+function getIconFormat(){
+  const f=localStorage.getItem('gmt_icon_format');
+  return (f==='png'||f==='webp'||f==='jpeg')?f:'png';
+}
+function setIconFormat(f){localStorage.setItem('gmt_icon_format',f);}
+
+// Validate by actually loading the image — a HEAD 200 from an SPA host can be
+// an HTML fallback, which is what makes icons render as broken-image + filename.
+function loadImageOk(url){
+  return new Promise(res=>{
+    const img=new Image();
+    let done=false;
+    img.onload=()=>{if(!done){done=true;res(img.naturalWidth>0);}};
+    img.onerror=()=>{if(!done){done=true;res(false);}};
+    img.src=url;
+  });
+}
+
+async function findIcon(name){
+  const enc=encodeURIComponent(name);
+  const primary=FORMAT_EXTS[getIconFormat()];
+  const others=ICON_EXTS.filter(e=>!primary.includes(e));
+  // 1) folder + selected format (the main "triple trouble" path)
+  for(const ext of primary){const u=`./Icons/${enc}/${enc}.${ext}`;if(await loadImageOk(u))return u;}
+  // 2) flat file + selected format
+  for(const ext of primary){const u=`./Icons/${enc}.${ext}`;if(await loadImageOk(u))return u;}
+  // 3) folder + any other format (so folder icons still show if the chosen one is missing)
+  for(const ext of others){const u=`./Icons/${enc}/${enc}.${ext}`;if(await loadImageOk(u))return u;}
+  // 4) flat file + any other format (legacy single-icon support)
+  for(const ext of others){const u=`./Icons/${enc}.${ext}`;if(await loadImageOk(u))return u;}
   return null;
+}
+
+// Re-resolve every icon with the current format and repaint cards, WITHOUT
+// touching preloadedUrls / videoUrls — so audio & video stay preloaded.
+async function reloadIcons(){
+  await Promise.all(songs.map(async(name,idx)=>{
+    const url=await findIcon(name);
+    iconUrls[idx]=url;
+    const card=cards[idx];
+    if(card){
+      const box=card.querySelector('.iconbox');
+      if(box)box.innerHTML=url?`<img src="${url}" alt="${esc(name)}">`:`<div class="icon-ph">♪</div>`;
+    }
+    if(idx===curIdx)setFlyContent(idx);
+  }));
 }
 
 // ── Render songs ──
@@ -1247,8 +1388,31 @@ function getOrCreateUQ(){
 }
 
 // ── Settings ──
+const fmtBtns=[...document.querySelectorAll('.fmt-btn')];
+function refreshFmtButtons(){
+  const ic=getIconFormat(),au=getAudioFormat();
+  fmtBtns.forEach(b=>{
+    const want=b.dataset.kind==='audio'?au:ic;
+    b.classList.toggle('active',b.dataset.fmt===want);
+  });
+}
+refreshFmtButtons();
+fmtBtns.forEach(b=>b.addEventListener('click',async()=>{
+  const kind=b.dataset.kind,f=b.dataset.fmt;
+  if(kind==='audio'){
+    if(f===getAudioFormat())return;
+    setAudioFormat(f);refreshFmtButtons();
+    await reloadAudio();   // re-resolve audio; videos stay preloaded
+  }else{
+    if(f===getIconFormat())return;
+    setIconFormat(f);refreshFmtButtons();
+    await reloadIcons();   // re-resolve icons; audio & video stay preloaded
+  }
+}));
+
 ui.settingsBtn.addEventListener('click',()=>{
   ui.settingsUQ.textContent='UQ: '+getOrCreateUQ();
+  refreshFmtButtons();
   ui.settingsPanel.classList.add('open');
 });
 ui.settingsClose.addEventListener('click',()=>{
