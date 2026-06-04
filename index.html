@@ -70,6 +70,10 @@
     .icon-ph{font-size:22px;color:rgba(255,255,255,0.65);}/* placeholder ♪ */
     .songname{font-size:15px;font-weight:700;letter-spacing:0.15px;line-height:1.2;transition:color 200ms ease;}
     .songsub{margin-top:4px;font-size:12px;color:var(--muted);}
+    .dl-status{font-size:12px;font-weight:700;margin-left:8px;opacity:0;transition:opacity .25s ease;white-space:nowrap;}
+    .dl-status.show{opacity:1;}
+    .dl-status.downloading{color:#f2c94c;}
+    .dl-status.done{color:#4ade80;}
     .song-play-btn{width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,0.14);background:rgba(255,255,255,0.07);display:grid;place-items:center;font-size:14px;flex-shrink:0;transition:background 140ms ease;}
     .song:hover .song-play-btn{background:rgba(255,255,255,0.13);}
     .song.playing .song-play-btn{background:var(--accent);border-color:transparent;}
@@ -245,6 +249,18 @@
       display:none;
     }
     #videoOverlay.active{display:block;}
+    #videoSpinner{
+      position:absolute;top:50%;left:50%;
+      width:54px;height:54px;margin:-27px 0 0 -27px;
+      border:4px solid rgba(255,255,255,0.18);
+      border-top-color:#fff;
+      border-radius:50%;
+      z-index:460;
+      display:none;
+      animation:vidSpin 0.8s linear infinite;
+    }
+    #videoSpinner.show{display:block;}
+    @keyframes vidSpin{to{transform:rotate(360deg);}}
     #videoEl{
       width:100%;height:100%;
       object-fit:contain;
@@ -284,53 +300,6 @@
     input[type=range].vidvol::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--accent);border:none;}
     .vid-min{width:32px;height:32px;border-radius:8px;border:1px solid rgba(255,255,255,0.13);background:rgba(255,255,255,0.06);display:grid;place-items:center;cursor:pointer;font-size:14px;color:rgba(255,255,255,0.6);transition:background 130ms ease;}
     .vid-min:hover{background:rgba(255,255,255,0.12);}
-
-    /* ── AGE GATE ── */
-    #ageGate{
-      position:fixed;inset:0;z-index:10000;
-      display:grid;place-items:center;
-      background:
-        radial-gradient(1200px 700px at 70% 20%,rgba(120,160,255,0.13),transparent 55%),
-        radial-gradient(900px 600px at 20% 70%,rgba(255,120,220,0.09),transparent 55%),
-        var(--bg);
-      transition:opacity 400ms ease,transform 400ms ease;
-    }
-    #ageGate.dismissed{opacity:0;transform:scale(1.02);pointer-events:none;}
-    .age-box{
-      width:min(420px,88vw);
-      padding:36px 30px 28px;
-      border-radius:22px;
-      background:linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.035));
-      border:1px solid var(--stroke);
-      box-shadow:0 24px 80px rgba(0,0,0,0.6);
-      backdrop-filter:blur(14px);
-      display:flex;flex-direction:column;align-items:center;gap:20px;
-      text-align:center;
-    }
-    .age-title{font-size:17px;font-weight:700;line-height:1.45;color:var(--text);}
-    .age-check{display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;}
-    .age-checkbox{
-      width:22px;height:22px;border-radius:6px;flex-shrink:0;
-      border:2px solid rgba(255,255,255,0.22);
-      background:rgba(0,0,0,0.25);
-      display:grid;place-items:center;
-      transition:border-color 160ms ease,background 160ms ease;
-    }
-    .age-check.checked .age-checkbox{border-color:var(--accent);background:var(--accent);}
-    .age-checkbox .tick{font-size:14px;color:#fff;opacity:0;transition:opacity 120ms ease;}
-    .age-check.checked .age-checkbox .tick{opacity:1;}
-    .age-label{font-size:13.5px;color:rgba(255,255,255,0.45);}
-    .age-proceed{
-      width:100%;padding:12px 0;border-radius:12px;border:none;
-      font-family:inherit;font-size:14.5px;font-weight:700;
-      color:rgba(255,255,255,0.3);background:rgba(255,255,255,0.06);
-      cursor:default;
-      transition:background 220ms ease,color 220ms ease,box-shadow 220ms ease,transform 80ms ease;
-    }
-    .age-proceed.active{color:#fff;background:var(--accent);cursor:pointer;box-shadow:0 4px 20px rgba(127,170,255,0.3);}
-    .age-proceed.active:hover{filter:brightness(1.1);}
-    .age-proceed.active:active{transform:scale(0.97);}
-    .age-note{font-size:11.5px;color:rgba(255,255,255,0.3);}
 
     /* ── SETTINGS ICON ── */
     #settingsBtn{
@@ -410,18 +379,6 @@
 <body>
 
 <!-- Age Gate -->
-<div id="ageGate">
-  <div class="age-box">
-    <div class="age-title">⚠️ Warning!<br>This tool will contain 18+ music.<br>Confirm below to enter.</div>
-    <div class="age-check" id="ageCheck">
-      <div class="age-checkbox"><span class="tick">✓</span></div>
-      <span class="age-label">I confirm I am 18 or older.</span>
-    </div>
-    <button class="age-proceed" id="ageProceed" disabled>Proceed</button>
-    <div class="age-note">(This warning will not show again)</div>
-  </div>
-</div>
-
 <!-- Settings button -->
 <div id="settingsBtn">⚙</div>
 
@@ -556,6 +513,7 @@
 <!-- Video player overlay -->
 <div id="videoOverlay">
   <video id="videoEl" playsinline></video>
+  <div id="videoSpinner"></div>
   <div id="videoTopBar"><div id="videoTopTitle">—</div></div>
   <div id="videoBottomBar">
     <div class="vid-scrub-wrap" id="vidScrub"><div class="vid-scrub-fill" id="vidScrubFill"></div></div>
@@ -603,7 +561,7 @@ const ui={
   settingsBtn:$id('settingsBtn'),settingsPanel:$id('settingsPanel'),
   settingsClose:$id('settingsClose'),settingsUQ:$id('settingsUQ'),
   fsModeAudio:$id('fsModeAudio'),fsModeVideo:$id('fsModeVideo'),
-  videoOverlay:$id('videoOverlay'),videoEl:$id('videoEl'),
+  videoOverlay:$id('videoOverlay'),videoEl:$id('videoEl'),videoSpinner:$id('videoSpinner'),
   videoTopBar:$id('videoTopBar'),videoTopTitle:$id('videoTopTitle'),
   videoBottomBar:$id('videoBottomBar'),
   vidScrub:$id('vidScrub'),vidScrubFill:$id('vidScrubFill'),
@@ -706,6 +664,25 @@ async function findVideo(name){
 
 // ── Video player logic ──
 const vidEl=ui.videoEl;
+
+// Loading spinner: show while a video buffers; hide once it can play. Videos
+// that have loaded before (cached) are tracked so the spinner won't reappear.
+const videoReady=new Set();
+let loadingVideoIdx=-1;
+function showVideoSpinner(idx){
+  loadingVideoIdx=idx;
+  // show only if this video hasn't loaded before; otherwise ensure it's hidden
+  ui.videoSpinner.classList.toggle('show',!videoReady.has(idx));
+}
+function hideVideoSpinner(){
+  ui.videoSpinner.classList.remove('show');
+  if(loadingVideoIdx>=0)videoReady.add(loadingVideoIdx);
+}
+vidEl.addEventListener('playing',hideVideoSpinner);
+vidEl.addEventListener('canplay',hideVideoSpinner);
+vidEl.addEventListener('error',()=>ui.videoSpinner.classList.remove('show'));
+vidEl.addEventListener('waiting',()=>{if(loadingVideoIdx>=0&&!videoReady.has(loadingVideoIdx))ui.videoSpinner.classList.add('show');});
+
 vidEl.addEventListener('timeupdate',()=>{
   if(!isVideoMode)return;
   const p=vidEl.duration?(vidEl.currentTime/vidEl.duration)*100:0;
@@ -783,6 +760,7 @@ function enterVideoMode(){
   // show video overlay
   ui.videoOverlay.classList.add('active');
   ui.videoTopTitle.textContent=songs[curIdx];
+  showVideoSpinner(curIdx);
   vidEl.src=videoUrls[curIdx];
   vidEl.volume=audio.volume;
   ui.vidVolSlider.value=audio.volume;
@@ -1012,6 +990,69 @@ function typewriter(newText){
   });
 }
 
+// ── Download status (yellow → green text next to the song title) ──
+let dlToken=0,dlStatusIdx=-1,dlHideTimer=null;
+function dlStatusEl(idx){const c=cards[idx];return c?c.querySelector('.dl-status'):null;}
+function showDlStatus(idx,text,cls){
+  if(dlStatusIdx>=0&&dlStatusIdx!==idx)clearDlStatus(dlStatusIdx);
+  if(dlHideTimer){clearTimeout(dlHideTimer);dlHideTimer=null;}
+  dlStatusIdx=idx;
+  const el=dlStatusEl(idx);if(!el)return;
+  el.textContent=text;
+  el.classList.remove('downloading','done');
+  el.classList.add(cls,'show');
+}
+function clearDlStatus(idx){
+  const el=dlStatusEl(idx);
+  if(el){el.classList.remove('show','downloading','done');el.textContent='';}
+  if(dlStatusIdx===idx)dlStatusIdx=-1;
+}
+function scheduleHideStatus(idx){
+  if(dlHideTimer)clearTimeout(dlHideTimer);
+  dlHideTimer=setTimeout(()=>{
+    const el=dlStatusEl(idx);
+    if(el){
+      el.classList.remove('show');
+      setTimeout(()=>{if(el&&!el.classList.contains('show')){el.textContent='';el.classList.remove('downloading','done');}},300);
+    }
+    if(dlStatusIdx===idx)dlStatusIdx=-1;
+  },3000);
+}
+
+// Download the song to a blob (showing status), then play it. Cached after
+// first download so replays are instant. Falls back to streaming on error.
+async function downloadAndPlay(idx,name){
+  const myToken=++dlToken;
+  const cached=preloadedUrls[idx];
+  if(typeof cached==='string'&&cached.startsWith('blob:')){
+    // already downloaded — play silently, no status flash
+    audio.src=cached;audio.play().catch(()=>{});
+    return;
+  }
+  showDlStatus(idx,'Downloading song...','downloading');
+  const url=await findAudio(name);
+  if(myToken!==dlToken)return;          // user clicked a different song
+  if(!url){clearDlStatus(idx);return;}
+  try{
+    const resp=await fetchTO(url,{},120000);
+    if(myToken!==dlToken)return;
+    if(!resp.ok)throw new Error('HTTP '+resp.status);
+    const blob=await resp.blob();
+    if(myToken!==dlToken)return;
+    const blobUrl=URL.createObjectURL(blob);
+    preloadedUrls[idx]=blobUrl;
+    showDlStatus(idx,'Download completed!','done');
+    audio.src=blobUrl;audio.play().catch(()=>{});
+    scheduleHideStatus(idx);
+  }catch(e){
+    if(myToken!==dlToken)return;
+    // fallback: stream the file directly so playback still works
+    preloadedUrls[idx]=url;
+    audio.src=url;audio.play().catch(()=>{});
+    clearDlStatus(idx);
+  }
+}
+
 // ── Play index ──
 async function playIdx(idx){
   if(!songs.length)return;
@@ -1068,6 +1109,7 @@ async function playIdx(idx){
     isVideoMode=true;
     ui.videoOverlay.classList.add('active');
     ui.videoTopTitle.textContent=name;
+    showVideoSpinner(idx);
     vidEl.src=videoUrls[idx];
     vidEl.volume=audio.volume;
     vidEl.play().catch(()=>{});
@@ -1088,10 +1130,8 @@ async function playIdx(idx){
     }
   }
 
-  // play audio — lazy: fetch on demand, then cache the resolved URL so replays
-  // skip the lookup. Only the song you actually play gets downloaded.
-  const url=preloadedUrls[idx]||await findAudio(name);
-  if(url){preloadedUrls[idx]=url;audio.src=url;audio.play().catch(()=>{});}
+  // download the song (status shows next to its title), then play it
+  await downloadAndPlay(idx,name);
 }
 
 function markPlaying(idx){
@@ -1267,7 +1307,7 @@ function renderSongs(list,src){
     const iconBox=document.createElement('div');iconBox.className='iconbox';
     iconBox.innerHTML=`<div class="icon-ph">♪</div>`;
     const info=document.createElement('div');
-    info.innerHTML=`<div class="songname">${esc(name)}</div><div class="songsub">Click to play</div>`;
+    info.innerHTML=`<div class="songname">${esc(name)}<span class="dl-status"></span></div><div class="songsub">Click to play</div>`;
     const btn=document.createElement('div');btn.className='song-play-btn';btn.textContent='▶';
     card.appendChild(iconBox);card.appendChild(info);card.appendChild(btn);
     const go=()=>{
@@ -1439,58 +1479,24 @@ ui.settingsPanel.addEventListener('click',(e)=>{
 // ── Boot ──
 (async()=>{
   // Generate UQ immediately on first ever visit
-  const uq=getOrCreateUQ();
+  getOrCreateUQ();
 
-  const gate=$id('ageGate');
-  const ageConfirmed=localStorage.getItem('gmt_age_confirmed')==='true';
-
-  function startApp(){
-    $id('loader').style.display='grid';
-    ui.settingsBtn.classList.add('visible');
-    // stagger the row reveals
-    setTimeout(()=>ui.rowS.classList.add('show'),50);
-    setTimeout(()=>ui.rowT.classList.add('show'),150);
-    setTimeout(()=>ui.rowA.classList.add('show'),250);
-    // fallback: if after 3s no bars are visible, show message
-    setTimeout(()=>{
-      const rows=[ui.rowS,ui.rowT,ui.rowA];
-      const anyVisible=rows.some(r=>r.classList.contains('show')&&r.offsetHeight>0&&getComputedStyle(r).opacity!=='0');
-      if(!anyVisible){
-        $id('loaderFallback').classList.add('visible');
-      }
-    },3000);
-    requestAnimationFrame(tick);
-    Promise.all([loadSongs(),loadTool()]);
-  }
-
-  if(ageConfirmed){
-    gate.style.display='none';
-    startApp();
-  } else {
-    // Show gate, hide loader until confirmed
-    $id('loader').style.display='none';
-    const check=$id('ageCheck');
-    const btn=$id('ageProceed');
-    let checked=false;
-
-    check.addEventListener('click',()=>{
-      checked=!checked;
-      check.classList.toggle('checked',checked);
-      btn.classList.toggle('active',checked);
-      btn.disabled=!checked;
-    });
-
-    btn.addEventListener('click',()=>{
-      if(!checked)return;
-      localStorage.setItem('gmt_age_confirmed','true');
-      apiPost('/update-key',{uq,updates:{ageConfirmed:true}});
-      gate.classList.add('dismissed');
-      setTimeout(()=>{
-        gate.style.display='none';
-        startApp();
-      },420);
-    });
-  }
+  $id('loader').style.display='grid';
+  ui.settingsBtn.classList.add('visible');
+  // stagger the row reveals
+  setTimeout(()=>ui.rowS.classList.add('show'),50);
+  setTimeout(()=>ui.rowT.classList.add('show'),150);
+  setTimeout(()=>ui.rowA.classList.add('show'),250);
+  // fallback: if after 3s no bars are visible, show message
+  setTimeout(()=>{
+    const rows=[ui.rowS,ui.rowT,ui.rowA];
+    const anyVisible=rows.some(r=>r.classList.contains('show')&&r.offsetHeight>0&&getComputedStyle(r).opacity!=='0');
+    if(!anyVisible){
+      $id('loaderFallback').classList.add('visible');
+    }
+  },3000);
+  requestAnimationFrame(tick);
+  Promise.all([loadSongs(),loadTool()]);
 })();
 </script>
 </body>
